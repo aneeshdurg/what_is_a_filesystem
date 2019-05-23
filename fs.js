@@ -78,7 +78,7 @@ __gen_LayeredFilesystem_callback_3("open");
 
 // Paths cannot have trailing / or // anywhere
 // max filename length = 15
-function MyFS() {
+function MyFS(canvas) {
     this.block_size = 16; // block size in B
     this.dirent_size = this.block_size;
     this.num_blocks = 256; // blocks can be addressed with 1B
@@ -113,6 +113,13 @@ function MyFS() {
     this.inodes[0].permissions = 0o755;
 
     this.max_filesize = (this.inodes[0].num_indirect * this.block_size + this.inodes[0].num_direct) * this.block_size;
+    if (canvas) {
+        this.animations = new FSAnimator(this, canvas);
+    } else {
+        this.animations = null;
+    }
+
+
 }
 
 MyFS.prototype.readdir = function (path) {
@@ -126,9 +133,9 @@ MyFS.prototype.readdir = function (path) {
     while (i < path_arr.length) {
         if (dir_contents == null) {
             inode = this.inodes[0];
-            console.log("Reading root inode", i, path_arr);
+            if (this.animations)
+                this.animations.select_inode(0);
         } else {
-            console.log("Reading inode for non-root node");
             inode = null;
             for (var j = 0; j < dir_contents.length; j++) {
                 if (dir_contents[j].filename == path_arr[i]) {
@@ -142,6 +149,8 @@ MyFS.prototype.readdir = function (path) {
             } else if (!inode.is_directory) {
                 return "ENOTDIR";
             }
+            if (this.animations)
+                this.animations.select_inode(inode);
         }
 
         dir_contents = [];
@@ -151,16 +160,15 @@ MyFS.prototype.readdir = function (path) {
             var offset = bytes_read % this.block_size;
 
             var dirent = null;
-            if (curr_block < inode.num_direct) {
-                var disk_offset = inode.direct[curr_block] * this.block_size;
-                var inodenum = new Uint8Array(this.disk, disk_offset, 1);
-                var filename = new Uint8Array(this.disk, disk_offset + 1, this.dirent_size - 1);
-                filename = String.fromCharCode.apply(null, filename).split("\u0000")[0];
-                dir_contents.push({
-                    inodenum: inodenum[0],
-                    filename: filename,
-                });
-            }
+            var block_num = this.get_nth_blocknum_from_inode(inode, curr_block);
+            var disk_offset = block_num * this.block_size;
+            var inodenum = new Uint8Array(this.disk, disk_offset, 1);
+            var filename = new Uint8Array(this.disk, disk_offset + 1, this.dirent_size - 1);
+            filename = String.fromCharCode.apply(null, filename).split("\u0000")[0];
+            dir_contents.push({
+                inodenum: inodenum[0],
+                filename: filename,
+            });
 
             bytes_read += this.block_size;
         }
@@ -198,6 +206,9 @@ MyFS.prototype.get_nth_blocknum_from_inode = function(inode, n) {
         var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
         var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
         block_num = indirect_entry[0];
+
+        if (this.animations)
+            this.animations.read_block_at(inode.indirect[0], indirect_index);
     }
 
     return block_num;
@@ -209,13 +220,21 @@ MyFS.prototype.unlink = function(path) {
         return inode;
 
     inode = this.inodes[inodenum];
+    if (this.animations)
+        this.animations.select_inode(inode);
+
     inode.num_links--;
-    if (inode.num_links == 0)
+    if (inode.num_links == 0) {
         this.empty_inode(inodenum);
+        if (this.animations)
+            this.animations.deregister_inode(inodenum);
+    }
 
     var split_filename = split_parent_of(path);
     var parent_inodenum = this.inode_of(split_filename[0]);
     var parent_inode = this.inodes[parent_inodenum];
+    if (this.animations)
+        this.animations.select_inode(parent_inodenum);
 
     // Find block number of dirent to be removed
     // This loop is gauranteed to find the inode since the case where the file
@@ -225,6 +244,8 @@ MyFS.prototype.unlink = function(path) {
     while (currblock < num_blocks) {
         var block_num = this.get_nth_blocknum_from_inode(parent_inode, currblock);
         var disk_offset = block_num * this.block_size;
+        if (this.animations)
+            this.animations.read_block_at(block_num, 0);
 
         var inode_of_dirent = new Uint8Array(this.disk, disk_offset, 1);
         if (inode_of_dirent[0] == inodenum)
@@ -245,6 +266,13 @@ MyFS.prototype.unlink = function(path) {
 
         var prevdirent = new Uint8Array(this.disk, prevblock_offset, this.dirent_size);
         var currdirent = new Uint8Array(this.disk, currblock_offset, this.dirent_size);
+
+        if (this.animations) {
+            this.animations.read_block_at(currblock_num, 0);
+            this.animations.read_block_at(prevblock_num, 0);
+        }
+
+
         for (var i = 0; i < this.dirent_size; i++)
             prevdirent[i] = currdirent[i];
 
@@ -269,14 +297,23 @@ MyFS.prototype.get_new_block = function (block) {
         return "ENOSPC";
 
     this.blockmap[found_block] = true;
+    if (this.animations)
+        this.animations.highlight_block(found_block);
+
     return found_block;
 };
 
 MyFS.prototype.release_block = function (block) {
     this.blockmap[block] = false;
+
+    if (this.animations)
+        this.animations.deregister_block(block);
 };
 
 MyFS.prototype.create = function (filename, mode, inode) {
+    if (typeof(this.inode_of(filename)) != 'string')
+        return "EEXISTS";
+
     if (mode == null)
         return "EINVAL";
 
@@ -306,9 +343,15 @@ MyFS.prototype.create = function (filename, mode, inode) {
         }
         if (found_inode == -1)
             return "ENOSPC";
+
+        if (this.animations)
+            this.animations.register_inode(found_inode);
     } else {
         found_inode = inode;
     }
+
+    if (this.animations)
+        this.animations.select_inode(inode);
 
     // time to append to the directory
     // We'll take advantage of the fact that dirent_size == block_size
@@ -331,12 +374,20 @@ MyFS.prototype.create = function (filename, mode, inode) {
                 this.release_block(new_block);
                 return indirect_block;
             }
+            if (this.animations)
+                this.animations.register_block_to_inode(parent_inodenum, indirect_block);
+
             parent_inode.indirect[0] = indirect_block;
         }
 
-        var disk_offset = inode.indirect[0] * this.block_size + curr_block;
+        if (this.animations)
+            this.animations.read_block_at(parent_inode.indirect[0], curr_block);
+
+        var disk_offset = parent_inode.indirect[0] * this.block_size + curr_block;
         var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
         curr_entry[0] = new_block;
+        if (this.animations)
+            this.animations.register_block_to_inode(parent_inode, new_block);
     }
 
     var disk_offset = new_block * this.block_size;
@@ -407,6 +458,9 @@ MyFS.prototype.chmod = function(path, permissions) {
     if (typeof(inodenum) == 'string')
         return inodenum;
     this.inodes[inodenum].permissions = permissions;
+
+    if (this.animations)
+        this.animations.select_inode(inodenum);
     return 0;
 };
 
@@ -415,6 +469,9 @@ MyFS.prototype.link = function(path1, path2) {
     var inodenum = this.inode_of(path1);
     if (typeof(inodenum) == 'string')
         return inodenum;
+
+    if (this.animations)
+        this.animations.select_inode(inodenum);
 
     return this.create(path2, this.inodes[inodenum].permissions, inodenum);
 };
@@ -429,6 +486,9 @@ MyFS.prototype.mkdir = function(name, mode) {
 };
 
 MyFS.prototype.ensure_min_blockcount = function (inode, blockcount) {
+
+    var inodenum = this.inodes.findIndex((x) => x == inode);
+
     console.log("invoked ensure_min_blockcount", inode);
     var currblocks = Math.ceil(inode.filesize / this.block_size);
 
@@ -452,15 +512,26 @@ MyFS.prototype.ensure_min_blockcount = function (inode, blockcount) {
     while (blocks_to_add) {
         if (currblocks < inode.num_direct) {
             inode.direct[currblocks] = this.get_new_block();
+            if (this.animations)
+                this.animations.register_block_to_inode(inodenum, inode.direct[currblocks]);
+
         } else {
             if (!initialized_indirect) {
                 inode.indirect[0] = this.get_new_block();
+                if (this.animations)
+                    this.animations.register_block_to_inode(inodenum, inode.indirect[0]);
                 initialized_indirect = true;
             }
+
             var indirect_index = currblocks - inode.num_direct;
             var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
             var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
+            if (this.animations)
+                this.animations.read_block_at(inode.indirect[0], indirect_index);
+
             curr_entry[0] = this.get_new_block();
+            if (this.animations)
+                this.animations.register_block_to_inode(inodenum, curr_entry[0]);
         }
 
         currblocks++;
@@ -501,6 +572,9 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
         var bytes_to_process = Math.min(this.block_size - blockoffset, total_bytes);
         var disk_offset = block * this.block_size + blockoffset;
         var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
+        if (this.animations)
+            this.animations.read_block_at(block, blockoffset);
+
         for (var i = 0; i < bytes_to_process; i++) {
             if (is_read)
                 buffer[i + bytes_written] = target[i];
@@ -520,6 +594,9 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
         var bytes_to_process = Math.min(this.block_size, total_bytes);
         var disk_offset = block * this.block_size;
         var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
+        if (this.animations)
+            this.animations.read_block_at(block, 0);
+
         for (var i = 0; i < bytes_to_process; i++) {
             if (is_read)
                 buffer[i + bytes_written] = target[i];
