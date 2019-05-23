@@ -1,17 +1,3 @@
-O_APPEND = 1;
-O_CREAT = 2;
-O_TRUNC = 4;
-O_RDONLY = 8;
-O_WRONLY = 16;
-O_RDWR = O_RDONLY | O_WRONLY;
-
-function FileDescriptor(fs, path, inode, mode) {
-    this.fs = fs;
-    this.path = path;
-    this.inode = inode;
-    this.mode = mode;
-    this.offset = 0;
-}
 
 function LayeredFilesystem() {
     this.mountpoints = {};
@@ -90,11 +76,6 @@ __gen_LayeredFilesystem_callback_2_resolve_2("link");
 
 __gen_LayeredFilesystem_callback_3("open");
 
-function not_implemented() {
-    // TODO errno stuff?
-    return;
-}
-
 // Paths cannot have trailing / or // anywhere
 // max filename length = 15
 function MyFS() {
@@ -132,17 +113,6 @@ function MyFS() {
     this.inodes[0].permissions = 0o755;
 
     this.max_filesize = (this.inodes[0].num_indirect * this.block_size + this.inodes[0].num_direct) * this.block_size;
-}
-
-function split_parent_of(child) {
-    if (child == "/")
-        return ["/", "/"];
-
-    var parts = child.split("/")
-    var parent_part = parts.slice(0,-1).join("/");
-    if (parent_part == "")
-        parent_part = "/";
-    return [ parent_part, parts.slice(-1)[0] ];
 }
 
 MyFS.prototype.readdir = function (path) {
@@ -216,6 +186,75 @@ MyFS.prototype.inode_of = function (file){
 };
 
 MyFS.prototype.mount = not_implemented;
+MyFS.prototype.stat = not_implemented;
+
+// Undefined if the inode doesn't actually have n blocks.
+MyFS.prototype.get_nth_blocknum_from_inode = function(inode, n) {
+    var block_num = 0;
+    if (n < inode.num_direct) {
+        block_num = inode.direct[n];
+    } else {
+        var indirect_index = n - inode.num_direct;
+        var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
+        var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
+        block_num = indirect_entry[0];
+    }
+
+    return block_num;
+}
+
+MyFS.prototype.unlink = function(path) {
+    var inodenum = this.inode_of(path);
+    if (typeof(inode) == 'string')
+        return inode;
+
+    inode = this.inodes[inodenum];
+    inode.num_links--;
+    if (inode.num_links == 0)
+        this.empty_inode(inodenum);
+
+    var split_filename = split_parent_of(path);
+    var parent_inodenum = this.inode_of(split_filename[0]);
+    var parent_inode = this.inodes[parent_inodenum];
+
+    // Find block number of dirent to be removed
+    // This loop is gauranteed to find the inode since the case where the file
+    // does not exist is handled in the inode_of call above.
+    var currblock = 0;
+    var num_blocks = Math.floor(parent_inode.filesize / this.dirent_size);
+    while (currblock < num_blocks) {
+        var block_num = this.get_nth_blocknum_from_inode(parent_inode, currblock);
+        var disk_offset = block_num * this.block_size;
+
+        var inode_of_dirent = new Uint8Array(this.disk, disk_offset, 1);
+        if (inode_of_dirent[0] == inodenum)
+            break;
+
+        currblock++;
+    }
+
+    // Now we have to move all blocks after the current one back by 1 block
+    var prevblock = currblock;
+    currblock++;
+    while (currblock < num_blocks) {
+        var prevblock_num = this.get_nth_blocknum_from_inode(parent_inode, prevblock);
+        var currblock_num = this.get_nth_blocknum_from_inode(parent_inode, currblock);
+
+        var prevblock_offset = prevblock_num * this.block_size;
+        var currblock_offset = currblock_num * this.block_size;
+
+        var prevdirent = new Uint8Array(this.disk, prevblock_offset, this.dirent_size);
+        var currdirent = new Uint8Array(this.disk, currblock_offset, this.dirent_size);
+        for (var i = 0; i < this.dirent_size; i++)
+            prevdirent[i] = currdirent[i];
+
+        prevblock = currblock;
+        currblock++;
+    }
+
+    parent_inode.filesize -= this.block_size;
+    return 0;
+};
 
 MyFS.prototype.get_new_block = function (block) {
     var found_block = -1;
@@ -389,9 +428,6 @@ MyFS.prototype.mkdir = function(name, mode) {
     return new_inode;
 };
 
-MyFS.prototype.stat = not_implemented;
-MyFS.prototype.unlink = not_implemented;
-
 MyFS.prototype.ensure_min_blockcount = function (inode, blockcount) {
     console.log("invoked ensure_min_blockcount", inode);
     var currblocks = Math.ceil(inode.filesize / this.block_size);
@@ -461,16 +497,7 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
     var blockoffset = filedes.offset % this.block_size;
     var bytes_written = 0;
     if (blockoffset) {
-        var block = null;
-        if (currblock < filedes.inode.num_direct) {
-            block = filedes.inode.direct[currblock];
-        } else {
-            var indirect_index = currblocks - filedes.inode.num_direct;
-            var disk_offset = filedes.inode.indirect[0] * this.block_size + indirect_index;
-            var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
-            block = curr_entry[0];
-        }
-
+        var block = this.get_nth_blocknum_from_inode(filedes.inode, currblock);
         var bytes_to_process = Math.min(this.block_size - blockoffset, total_bytes);
         var disk_offset = block * this.block_size + blockoffset;
         var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
@@ -487,18 +514,9 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
     }
     console.log("copied remainder");
 
-    // TODO create get_nth_block method
     while (total_bytes) {
         console.log("copying block", currblock);
-        var block = null;
-        if (currblock < filedes.inode.num_direct) {
-            block = filedes.inode.direct[currblock];
-        } else {
-            var indirect_index = currblock - filedes.inode.num_direct;
-            var disk_offset = filedes.inode.indirect[0] * this.block_size + indirect_index;
-            var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
-            block = curr_entry[0];
-        }
+        var block = this.get_nth_blocknum_from_inode(filedes.inode, currblock);
         var bytes_to_process = Math.min(this.block_size, total_bytes);
         var disk_offset = block * this.block_size;
         var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);

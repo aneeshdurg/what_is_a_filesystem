@@ -1,3 +1,4 @@
+<script src="utils.js"></script>
 <script src="fs.js"></script>
 <script>
 
@@ -12,7 +13,10 @@ function run_test(test) {
     var return_val = null;
     try {
         return_val = test();
-    } catch (err) {}
+    } catch (err) {
+        console.log(err);
+    }
+
     if (return_val)
         document.body.appendChild(
             document.createTextNode(test.name + ": Success!"));
@@ -117,4 +121,16 @@ function test_link() {
     assert(file1.inode == fs.inodes[inode2]);
     assert(typeof(i1) !== 'string');
     return fs;
-}</script>
+}
+
+function test_unlink() {
+    // Depends on test_link
+    fs = test_link();
+    fs.unlink("/newfile");
+    assert(fs.readdir("/").length == 1);
+    assert(fs.readdir("/")[0].filename == "newfile1");
+    fs.unlink("/newfile1");
+    assert(fs.readdir("/").length == 0);
+    return fs;
+}
+</script>
