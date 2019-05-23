@@ -1,6 +1,17 @@
 O_APPEND = 1;
 O_CREAT = 2;
 O_TRUNC = 4;
+O_RDONLY = 8;
+O_WRONLY = 16;
+O_RDWR = O_RDONLY | O_WRONLY;
+
+function FileDescriptor(fs, path, inode, mode) {
+    this.fs = fs;
+    this.path = path;
+    this.inode = inode;
+    this.mode = mode;
+    this.offset = 0;
+}
 
 function LayeredFilesystem() {
     this.mountpoints = {};
@@ -33,8 +44,13 @@ function __gen_LayeredFilesystem_callback_1(name) {
         "};");
 }
 
-// file_descriptor is an object containing the offset
-function __gen_LayeredFilesystem_callback_2(name) {
+function __gen_LayeredFilesystem_callback_2_file(name) {
+    eval("LayeredFilesystem.prototype." + name + "= function (file, arg2) {" +
+        "  return file.fs." + name + "(file, arg2);" +
+        "};");
+}
+
+function __gen_LayeredFilesystem_callback_2_resolve_1(name) {
     eval("LayeredFilesystem.prototype." + name + "= function (path, arg2) {" +
         "  var resolved = this.resolve_fs_and_path(path);" +
         "  if (typeof(resolved) === 'string') return resolved;" +
@@ -42,6 +58,16 @@ function __gen_LayeredFilesystem_callback_2(name) {
         "};");
 }
 
+function __gen_LayeredFilesystem_callback_2_resolve_2(name) {
+    eval("LayeredFilesystem.prototype." + name + "= function (path, path2) {" +
+        "  var resolved = this.resolve_fs_and_path(path);" +
+        "  var resolved2 = this.resolve_fs_and_path(path2);" +
+        "  if (typeof(resolved) === 'string') return resolved;" +
+        "  if (typeof(resolved2) === 'string') return resolved2;" +
+        "  if (resolved.fs != resolved2.fs) return 'EINVAL';" +
+        "  return resolved.fs." + name + "(resolved.relpath, resolved2.relpath);" +
+        "};");
+}
 function __gen_LayeredFilesystem_callback_3(name) {
     eval("LayeredFilesystem.prototype." + name + "= function (path, arg2, arg3) {" +
         "  var resolved = this.resolve_fs_and_path(path);" +
@@ -56,10 +82,11 @@ __gen_LayeredFilesystem_callback_1("readdir");
 __gen_LayeredFilesystem_callback_1("stat");
 __gen_LayeredFilesystem_callback_1("unlink");
 
-__gen_LayeredFilesystem_callback_2("chmod");
-__gen_LayeredFilesystem_callback_2("link");
-__gen_LayeredFilesystem_callback_2("read");
-__gen_LayeredFilesystem_callback_2("write");
+__gen_LayeredFilesystem_callback_2_file("read");
+__gen_LayeredFilesystem_callback_2_file("write");
+
+__gen_LayeredFilesystem_callback_2_resolve_1("chmod");
+__gen_LayeredFilesystem_callback_2_resolve_2("link");
 
 __gen_LayeredFilesystem_callback_3("open");
 
@@ -112,7 +139,7 @@ function split_parent_of(child) {
         return ["/", "/"];
 
     var parts = child.split("/")
-    var parent_part = parts.slice(0,-1);
+    var parent_part = parts.slice(0,-1).join("/");
     if (parent_part == "")
         parent_part = "/";
     return [ parent_part, parts.slice(-1)[0] ];
@@ -178,9 +205,10 @@ MyFS.prototype.inode_of = function (file){
         return 0;
 
     var split_filename = split_parent_of(file);
+    console.log(file, split_filename, split_filename[0]);
     var entries = this.readdir(split_filename[0]);
     for (var i = 0; i < entries.length; i++) {
-        if (entires[i].filename == split_filename[1]) {
+        if (entries[i].filename == split_filename[1]) {
             return entries[i].inodenum;
         }
     }
@@ -206,10 +234,10 @@ MyFS.prototype.get_new_block = function (block) {
 };
 
 MyFS.prototype.release_block = function (block) {
-    this.blockmap[found_block] = false;
+    this.blockmap[block] = false;
 };
 
-MyFS.prototype.create = function (filename, flags, mode) {
+MyFS.prototype.create = function (filename, mode, inode) {
     if (mode == null)
         return "EINVAL";
 
@@ -229,14 +257,19 @@ MyFS.prototype.create = function (filename, flags, mode) {
         return "ENOSPC";
 
     var found_inode = -1;
-    for (var i = 1; i < this.num_inodes; i++) {
-        if (this.inodes[i].num_links == 0) {
-            found_inode = i;
-            break;
+    // if inode is 0 or undefined then we need to grab a fresh inode
+    if (!inode) {
+        for (var i = 1; i < this.num_inodes; i++) {
+            if (this.inodes[i].num_links == 0) {
+                found_inode = i;
+                break;
+            }
         }
+        if (found_inode == -1)
+            return "ENOSPC";
+    } else {
+        found_inode = inode;
     }
-    if (found_inode == -1)
-        return "ENOSPC";
 
     // time to append to the directory
     // We'll take advantage of the fact that dirent_size == block_size
@@ -244,6 +277,7 @@ MyFS.prototype.create = function (filename, flags, mode) {
     if (typeof(new_block) === 'string')
         return new_block;
 
+    // we know that curr_block isn't on the inode by our assumption
     var curr_block = Math.floor(parent_inode.filesize / this.block_size);
     console.log("Curr block", curr_block);
     if (curr_block < parent_inode.num_direct) {
@@ -258,7 +292,7 @@ MyFS.prototype.create = function (filename, flags, mode) {
                 this.release_block(new_block);
                 return indirect_block;
             }
-            parent_inode.indirect_block[0] = indirect_block;
+            parent_inode.indirect[0] = indirect_block;
         }
 
         var disk_offset = inode.indirect[0] * this.block_size + curr_block;
@@ -280,22 +314,217 @@ MyFS.prototype.create = function (filename, flags, mode) {
     return found_inode;
 };
 
+MyFS.prototype.empty_inode = function (inodenum) {
+    var had_indirect = false;
+    var blocknum = 0;
+    while (this.inodes[inodenum].filesize > 0) {
+        if (blocknum < this.inodes[inodenum].num_direct) {
+            this.release_block(this.inodes[inodenum].direct[blocknum]);
+        } else {
+            had_indirect = true;
+            var indirect_block = this.inodes[inodenum].indirect[0];
+
+            var indirect_index = blocknum - this.inodes[inodenum].num_direct;
+            var disk_offset = indirect_block * this.block_size + indirect_index;
+
+            var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
+            this.release_block(indirect_entry[0]);
+        }
+        this.inodes[inodenum].filesize -= Math.min(this.inodes[inodenum].filesize, this.block_size);
+        blocknum++;
+    }
+
+    if (had_indirect)
+        this.release_block(this.inodes[inodenum].indirect[0]);
+}
+
 MyFS.prototype.open = function (filename, flags, mode) {
     var inodenum = null;
     if ((flags & O_CREAT) && this.inode_of(filename) === 'ENOENT') {
         console.log("Creating");
-        inodenum = this.create(filename, flags, mode);
+        inodenum = this.create(filename, mode);
         console.log(inodenum);
+    } else {
+        inodenum = this.inode_of(filename);
+        if (typeof(inodenum) == 'string')
+            return inodenum;
     }
+
+    // TODO check permissions (might not do this)
+    if ((flags & O_TRUNC) && (flags & O_WRONLY))
+        this.empty_inode(inodenum);
+
+    var filedes = new FileDescriptor(this, filename, this.inodes[inodenum], flags & O_RDWR);
+    if ((flags & O_APPEND) && (flags & O_WRONLY))
+        filedes.offset = this.inodes.filesize;
+
+    return filedes;
 };
 
-MyFS.prototype.close = not_implemented;
+MyFS.prototype.close = (filedes) => {};
 
-MyFS.prototype.chmod = not_implemented;
-MyFS.prototype.link = not_implemented;
-MyFS.prototype.mkdir = not_implemented;
-MyFS.prototype.read = not_implemented;
+MyFS.prototype.chmod = function(path, permissions) {
+    var inodenum = this.inode_of(path);
+    if (typeof(inodenum) == 'string')
+        return inodenum;
+    this.inodes[inodenum].permissions = permissions;
+    return 0;
+};
+
+// hardlinks only
+MyFS.prototype.link = function(path1, path2) {
+    var inodenum = this.inode_of(path1);
+    if (typeof(inodenum) == 'string')
+        return inodenum;
+
+    return this.create(path2, this.inodes[inodenum].permissions, inodenum);
+};
+
+MyFS.prototype.mkdir = function(name, mode) {
+    var new_inode = this.create(name, mode);
+    if (typeof(new_inode) == 'string')
+        return new_inode;
+
+    this.inodes[new_inode].is_directory = true;
+    return new_inode;
+};
 
 MyFS.prototype.stat = not_implemented;
 MyFS.prototype.unlink = not_implemented;
-MyFS.prototype.write = not_implemented;
+
+MyFS.prototype.ensure_min_blockcount = function (inode, blockcount) {
+    console.log("invoked ensure_min_blockcount", inode);
+    var currblocks = Math.ceil(inode.filesize / this.block_size);
+
+    var blocks_to_add = blockcount - currblocks;
+    if (blocks_to_add <= 0)
+        return 0;
+
+    var needs_indirect = false;
+    var total_disk_blocks_needed = blocks_to_add;
+    // increment if we're also adding an indrect block
+    if (currblocks == inode.num_direct) {
+        needs_indirect = true;
+        total_disk_blocks_needed++;
+    }
+
+    var free_blocks = this.blockmap.map((x) => !x).reduce((x, y) => x + y);
+    if (total_disk_blocks_needed > free_blocks)
+        return "ENOSPC";
+
+    var initialized_indirect = (currblocks > inode.num_direct);
+    while (blocks_to_add) {
+        if (currblocks < inode.num_direct) {
+            inode.direct[currblocks] = this.get_new_block();
+        } else {
+            if (!initialized_indirect) {
+                inode.indirect[0] = this.get_new_block();
+                initialized_indirect = true;
+            }
+            var indirect_index = currblocks - inode.num_direct;
+            var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
+            var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
+            curr_entry[0] = this.get_new_block();
+        }
+
+        currblocks++;
+        blocks_to_add--;
+    }
+
+    return 0;
+};
+
+MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
+    console.log("invoked read_or_write");
+    if (buffer.BYTES_PER_ELEMENT != 1)
+        return "EINVAL";
+
+    var total_bytes = buffer.length;
+    var final_filesize = null;
+    if (!is_read) {
+        final_filesize = Math.max(filedes.inode.filesize, total_bytes + filedes.offset);
+        if (final_filesize > this.max_filesize)
+            return "ENOSPC";
+
+        var success = this.ensure_min_blockcount(filedes.inode, Math.ceil(final_filesize / this.block_size));
+        if (typeof(success) === 'string')
+            return success;
+    } else {
+        if (filedes.offset >= filedes.inode.filesize)
+            return 0;
+        total_bytes = Math.min(filedes.inode.filesize - filedes.offset, total_bytes);
+    }
+    console.log("finished setup");
+
+
+    var currblock = Math.floor(filedes.offset / this.block_size);
+    var blockoffset = filedes.offset % this.block_size;
+    var bytes_written = 0;
+    if (blockoffset) {
+        var block = null;
+        if (currblock < filedes.inode.num_direct) {
+            block = filedes.inode.direct[currblock];
+        } else {
+            var indirect_index = currblocks - filedes.inode.num_direct;
+            var disk_offset = filedes.inode.indirect[0] * this.block_size + indirect_index;
+            var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
+            block = curr_entry[0];
+        }
+
+        var bytes_to_process = Math.min(this.block_size - blockoffset, total_bytes);
+        var disk_offset = block * this.block_size + blockoffset;
+        var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
+        for (var i = 0; i < bytes_to_process; i++) {
+            if (is_read)
+                buffer[i + bytes_written] = target[i];
+            else
+                target[i] = buffer[i + bytes_written];
+        }
+
+        bytes_written += bytes_to_process;
+        total_bytes -= bytes_to_process;
+        currblock++;
+    }
+    console.log("copied remainder");
+
+    // TODO create get_nth_block method
+    while (total_bytes) {
+        console.log("copying block", currblock);
+        var block = null;
+        if (currblock < filedes.inode.num_direct) {
+            block = filedes.inode.direct[currblock];
+        } else {
+            var indirect_index = currblock - filedes.inode.num_direct;
+            var disk_offset = filedes.inode.indirect[0] * this.block_size + indirect_index;
+            var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
+            block = curr_entry[0];
+        }
+        var bytes_to_process = Math.min(this.block_size, total_bytes);
+        var disk_offset = block * this.block_size;
+        var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
+        for (var i = 0; i < bytes_to_process; i++) {
+            if (is_read)
+                buffer[i + bytes_written] = target[i];
+            else
+                target[i] = buffer[i + bytes_written];
+        }
+
+        bytes_written += bytes_to_process;
+        total_bytes -= bytes_to_process;
+        currblock++;
+    }
+
+    filedes.offset += bytes_written;
+    if (!is_read)
+        filedes.inode.filesize = final_filesize;
+
+    return bytes_written;
+};
+
+MyFS.prototype.write = function (filedes, buffer) {
+    return this.read_or_write(filedes, buffer, false);
+};
+
+MyFS.prototype.read = function (filedes, buffer) {
+    return this.read_or_write(filedes, buffer, true);
+};
