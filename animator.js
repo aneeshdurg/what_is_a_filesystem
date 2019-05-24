@@ -1,3 +1,8 @@
+function Task(resolve, callback) {
+    this.resolve = resolve;
+    this.callback = callback;
+}
+
 function FSAnimator(fs, canvas, block_limit) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
@@ -8,9 +13,10 @@ function FSAnimator(fs, canvas, block_limit) {
 
     this.inode_width = Math.ceil(this.canvas.width * 0.25 / this.fs.num_inodes);
     this.block_width = Math.ceil(this.canvas.width * 0.75 / this.block_limit);
-    this.ctx.stroke();
 
-    this.duration = 500;
+    this.tasks = [];
+
+    this.duration = 100;
 
     this.registered_inodes = {};
     this.registered_blocks = {};
@@ -19,10 +25,19 @@ function FSAnimator(fs, canvas, block_limit) {
     this.selected_inodes = [];
 
     this.register_inode(0);
-    this.draw();
+
+    var that = this;
+    setInterval(() => { that.draw() }, this.duration);
 }
 
 FSAnimator.prototype.draw = function() {
+    var currtask = null;
+    if (this.tasks.length) {
+        console.log("Draw had a task!");
+        currtask = this.tasks.shift();
+        currtask.callback.call(this);
+    }
+
 	this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
     for (var i = 0; i < this.fs.num_inodes; i++) {
         this.ctx.beginPath();
@@ -46,9 +61,7 @@ FSAnimator.prototype.draw = function() {
         this.ctx.stroke();
     }
 
-    var read_count = 0;
-    while (read_count < this.block_limit/2 && this.reading_blocks.length) {
-        read_count++;
+    while (this.reading_blocks.length) {
         var i = this.reading_blocks.shift();
         console.log("Operating on block", i);
         this.ctx.globalAlpha = 0.2;
@@ -64,8 +77,10 @@ FSAnimator.prototype.draw = function() {
 
     this.ctx.translate(-1 * this.canvas.width * 0.25, 0);
 
-    var that = this;
-    setTimeout(() => { that.draw() }, this.duration);
+    if (currtask) {
+        currtask.resolve();
+        console.log("Resolved a task");
+    }
 };
 
 // https://stackoverflow.com/questions/1484506/random-color-generator
@@ -78,33 +93,57 @@ function getRandomColor() {
   return color;
 }
 
-FSAnimator.prototype.read_block = function (blocknum){
-    this.reading_blocks.push(blocknum);
+FSAnimator.prototype.submitTask = async function (callback){
+    promise_collector = []
+    p = new Promise(resolve => promise_collector.push(resolve));
+    while (promise_collector.length == 0) {};
+    console.log(promise_collector, p);
+
+    task = new Task(promise_collector[0], callback);
+    this.tasks.push(task);
+    return p;
 };
 
-FSAnimator.prototype.register_block_to_inode = function (inodenum, blocknum){
-    this.registered_blocks[blocknum] = inodenum;
+FSAnimator.prototype.read_block = async function (blocknum){
+   function callback() {
+        this.reading_blocks.push(blocknum);
+    }
+    var p =  this.submitTask(callback);
+    console.log(p);
+    await p;
 };
 
-FSAnimator.prototype.deregister_block = function (blocknum){
-    //this.after_pending_operations(function (){
+FSAnimator.prototype.register_block_to_inode = async function (inodenum, blocknum){
+    function callback() {
+        this.registered_blocks[blocknum] = inodenum;
+    }
+    await this.submitTask(callback);
+};
+
+FSAnimator.prototype.deregister_block = async function (blocknum){
+    function callback(){
         this.registered_blocks[blocknum] = null;
-    //})
+    }
+    await this.submitTask(callback);
 };
 
-FSAnimator.prototype.deregister_inode = function (inodenum){
-    //this.after_pending_operations(function (){
+FSAnimator.prototype.deregister_inode = async function (inodenum){
+    function callback(){
         this.registered_inodes[inodenum] = null;
-    //});
+    }
+    await this.submitTask(callback);
 };
 
-FSAnimator.prototype.register_inode = function (inodenum){
-    //this.after_pending_operations(function (){
+FSAnimator.prototype.register_inode = async function (inodenum){
+    function callback(){
         console.log("Registered", inodenum);
         var color = getRandomColor();
         this.registered_inodes[inodenum] = color;
-    //});
+    }
+    var p = this.submitTask(callback);
+    console.log(p);
+    await p;
 };
 
-FSAnimator.prototype.select_inode = function (inodenum){
+FSAnimator.prototype.select_inode = async function (inodenum){
 };
