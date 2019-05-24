@@ -13,6 +13,7 @@ function FSAnimator(fs, canvas, block_limit) {
     this.duration = 500;
 
     this.registered_inodes = {};
+    this.registered_blocks = {};
     this.selected_inodes = [];
 
     this.register_inode(0);
@@ -33,7 +34,12 @@ FSAnimator.prototype.draw = function() {
     this.ctx.translate(this.canvas.width * 0.25, 0);
 
     for (var i = 0; i < this.block_limit; i++) {
+        this.ctx.beginPath();
         this.ctx.rect(i * this.block_width, 0, this.block_width, this.ctx.canvas.height);
+        if (this.registered_blocks[i]) {
+            this.ctx.fillStyle = this.registered_inodes[this.registered_blocks[i]];
+            this.ctx.fill();
+        }
         this.ctx.stroke();
     }
 
@@ -54,10 +60,18 @@ FSAnimator.prototype.redraw = () => {};
 
 FSAnimator.prototype.highlight_block = () => {};
 FSAnimator.prototype.read_block_at = () => {};
-FSAnimator.prototype.register_block_to_inode = () => {};
+FSAnimator.prototype.register_block_to_inode = function (inodenum, blocknum) {
+    this.registered_blocks[blocknum] = inodenum;
+    this.draw();
+};
+
 FSAnimator.prototype.deregister_block = () => {};
 
-FSAnimator.prototype.deregister_inode = () => {};
+FSAnimator.prototype.deregister_inode = function (inodenum) {
+    this.registered_inodes[inodenum] = false;
+    this.draw();
+};
+
 FSAnimator.prototype.register_inode = function (inodenum) {
     console.log("Registered", inodenum);
     var color = getRandomColor();
@@ -65,4 +79,5 @@ FSAnimator.prototype.register_inode = function (inodenum) {
     this.draw();
 };
 
-FSAnimator.prototype.select_inode = () => {};
+FSAnimator.prototype.select_inode = function (inodenum) {
+};
