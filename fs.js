@@ -444,9 +444,12 @@ MyFS.prototype.open = function (filename, flags, mode) {
     if ((flags & O_TRUNC) && (flags & O_WRONLY))
         this.empty_inode(inodenum);
 
+    if (flags & O_APPEND)
+        flags |= O_WRONLY;
+
     var filedes = new FileDescriptor(this, filename, this.inodes[inodenum], flags & O_RDWR);
-    if ((flags & O_APPEND) && (flags & O_WRONLY))
-        filedes.offset = this.inodes.filesize;
+    if (flags & O_APPEND)
+        filedes.offset = filedes.inode.filesize;
 
     return filedes;
 };
@@ -550,6 +553,7 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
     var final_filesize = null;
     if (!is_read) {
         final_filesize = Math.max(filedes.inode.filesize, total_bytes + filedes.offset);
+        console.log("Final filesize will be", final_filesize, total_bytes, filedes.offset);
         if (final_filesize > this.max_filesize)
             return "ENOSPC";
 
