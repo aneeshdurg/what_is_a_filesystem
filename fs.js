@@ -208,7 +208,7 @@ MyFS.prototype.get_nth_blocknum_from_inode = function(inode, n) {
         block_num = indirect_entry[0];
 
         if (this.animations)
-            this.animations.read_block_at(inode.indirect[0], indirect_index);
+            this.animations.read_block(inode.indirect[0]);
     }
 
     return block_num;
@@ -218,6 +218,9 @@ MyFS.prototype.unlink = function(path) {
     var inodenum = this.inode_of(path);
     if (typeof(inodenum) == 'string')
         return inodenum;
+
+    if (inodenum == 0)
+        return "EPERM";
 
     inode = this.inodes[inodenum];
     if (this.animations)
@@ -245,7 +248,7 @@ MyFS.prototype.unlink = function(path) {
         var block_num = this.get_nth_blocknum_from_inode(parent_inode, currblock);
         var disk_offset = block_num * this.block_size;
         if (this.animations)
-            this.animations.read_block_at(block_num, 0);
+            this.animations.read_block(block_num);
 
         var inode_of_dirent = new Uint8Array(this.disk, disk_offset, 1);
         if (inode_of_dirent[0] == inodenum)
@@ -273,8 +276,8 @@ MyFS.prototype.unlink = function(path) {
         var currdirent = new Uint8Array(this.disk, currblock_offset, this.dirent_size);
 
         if (this.animations) {
-            this.animations.read_block_at(currblock_num, 0);
-            this.animations.read_block_at(prevblock_num, 0);
+            this.animations.read_block(currblock_num);
+            this.animations.read_block(prevblock_num);
         }
 
 
@@ -284,6 +287,12 @@ MyFS.prototype.unlink = function(path) {
         prevblock = currblock;
         currblock++;
     }
+
+    // decrement size and remove last block
+    var lastblock_num = this.get_nth_blocknum_from_inode(parent_inode, num_blocks - 1);
+    this.release_block(lastblock_num);
+    if ((num_blocks - 1) < parent_inode.num_direct)
+        this.release_block(parent_inode.indirect[0]);
 
     parent_inode.filesize -= this.block_size;
     return 0;
@@ -302,9 +311,6 @@ MyFS.prototype.get_new_block = function (block) {
         return "ENOSPC";
 
     this.blockmap[found_block] = true;
-    if (this.animations)
-        this.animations.highlight_block(found_block);
-
     return found_block;
 };
 
@@ -386,14 +392,14 @@ MyFS.prototype.create = function (filename, mode, inode) {
         }
 
         if (this.animations)
-            this.animations.read_block_at(parent_inode.indirect[0], curr_block);
+            this.animations.read_block(parent_inode.indirect[0]);
 
         var disk_offset = parent_inode.indirect[0] * this.block_size + curr_block;
         var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
         curr_entry[0] = new_block;
-        if (this.animations)
-            this.animations.register_block_to_inode(parent_inode, new_block);
     }
+    if (this.animations)
+        this.animations.register_block_to_inode(parent_inodenum, new_block);
 
     var disk_offset = new_block * this.block_size;
 
@@ -543,7 +549,7 @@ MyFS.prototype.ensure_min_blockcount = function (inode, blockcount) {
             var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
             var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
             if (this.animations)
-                this.animations.read_block_at(inode.indirect[0], indirect_index);
+                this.animations.read_block(inode.indirect[0]);
 
             curr_entry[0] = this.get_new_block();
             if (this.animations)
@@ -561,6 +567,11 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
     console.log("invoked read_or_write");
     if (buffer.BYTES_PER_ELEMENT != 1)
         return "EINVAL";
+
+    if (is_read && !(filedes.mode & O_RDONLY))
+        return "EBADF";
+    else if (!is_read && !(filedes.mode & O_WRONLY))
+        return "EBADF"
 
     var total_bytes = buffer.length;
     var final_filesize = null;
@@ -590,7 +601,7 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
         var disk_offset = block * this.block_size + blockoffset;
         var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
         if (this.animations)
-            this.animations.read_block_at(block, blockoffset);
+            this.animations.read_block(block);
 
         for (var i = 0; i < bytes_to_process; i++) {
             if (is_read)
@@ -612,7 +623,7 @@ MyFS.prototype.read_or_write = function (filedes, buffer, is_read) {
         var disk_offset = block * this.block_size;
         var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
         if (this.animations)
-            this.animations.read_block_at(block, 0);
+            this.animations.read_block(block);
 
         for (var i = 0; i < bytes_to_process; i++) {
             if (is_read)
