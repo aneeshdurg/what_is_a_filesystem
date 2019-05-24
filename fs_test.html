@@ -10,10 +10,10 @@ function assert(cond) {
         throw Error("Assertion failed!");
 }
 
-function run_test(test) {
+async function run_test(test) {
     var return_val = null;
     try {
-        return_val = test();
+        return_val = await test();
     } catch (err) {
         console.log(err);
     }
@@ -45,93 +45,95 @@ function main() {
     document.body.appendChild(document.createElement("br"));
 }
 
-function test_readdir() {
+async function test_readdir() {
     fs = new MyFS();
-    assert(fs.readdir("/").length == 0);
-    fs.open("/asdf", O_CREAT, 0o777);
-    assert(fs.readdir("/").length == 1);
+    assert((await fs.readdir("/")).length == 0);
+    await fs.open("/asdf", O_CREAT, 0o777);
+    assert((await fs.readdir("/")).length == 1);
     return fs;
 }
 
-function test_write(){
+async function test_write(){
     fs = new MyFS();
-    console.log(fs.readdir("/").length == 0);
-    fs.open("/asdf", O_CREAT, 0o777);
-    file = fs.open("/asdf", O_WRONLY);
+    console.log((await fs.readdir("/")).length == 0);
+    await fs.open("/asdf", O_CREAT, 0o777);
+    file = await fs.open("/asdf", O_WRONLY);
     console.log(file);
     buffer = new ArrayBuffer(32);
     data = new Uint8Array(buffer);
     data.fill(65);
-    fs.write(file, data);
-    fs.close(file);
+    await fs.write(file, data);
+    await fs.close(file);
 
-    console.log(fs.readdir("/"));
+    console.log(await fs.readdir("/"));
 
-    file = fs.open("/asdf", O_RDONLY);
+    file = await fs.open("/asdf", O_RDONLY);
     console.log(file);
 
     buffer = new ArrayBuffer(32);
     data = new Uint8Array(buffer);
-    fs.read(file, data);
+    await fs.read(file, data);
     console.log(data);
 
-    fs.close(file);
+    await fs.close(file);
     return fs;
 }
 
-function test_write_max(){
+async function test_write_max(){
     fs = new MyFS();
-    console.log(fs.readdir("/").length == 0);
-    fs.open("/asdf", O_CREAT, 0o777);
-    file = fs.open("/asdf", O_WRONLY);
+    console.log(await fs.readdir("/").length == 0);
+    await fs.open("/asdf", O_CREAT, 0o777);
+    file = await fs.open("/asdf", O_WRONLY);
     console.log(file);
     buffer = new ArrayBuffer(fs.max_filesize);
     data = new Uint8Array(buffer);
     data.fill(65);
-    fs.write(file, data);
-    fs.close(file);
+    await fs.write(file, data);
+    await fs.close(file);
 
-    console.log(fs.readdir("/"));
+    console.log(await fs.readdir("/"));
 
-    file = fs.open("/asdf", O_RDONLY);
+    file = await fs.open("/asdf", O_RDONLY);
     console.log(file);
 
     buffer = new ArrayBuffer(fs.max_filesize);
     data = new Uint8Array(buffer);
-    fs.read(file, data);
+    await fs.read(file, data);
     console.log(data);
 
-    fs.close(file);
+    await fs.close(file);
     return fs;
 }
 
-function test_mkdir() {
+async function test_mkdir() {
     fs = new MyFS();
-    fs.mkdir("/newdir", 0o777);
-    fs.open("/newdir/newfile", O_CREAT, 0o777);
-    console.log(fs.readdir("/"));
-    console.log(fs.readdir("/newdir"));
+    await fs.mkdir("/newdir", 0o777);
+    await fs.open("/newdir/newfile", O_CREAT, 0o777);
+    console.log(await fs.readdir("/"));
+    console.log(await fs.readdir("/newdir"));
     return fs;
 }
 
-function test_link() {
+async function test_link() {
     fs = new MyFS();
-    var file1 = fs.open("/newfile", O_CREAT, 0o777);
-    var inode2 = fs.link("/newfile", "/newfile1");
-    assert(fs.readdir("/").length == 2);
+    var file1 = await fs.open("/newfile", O_CREAT, 0o777);
+    var inode2 = await fs.link("/newfile", "/newfile1");
+    assert((await fs.readdir("/")).length == 2);
     assert(file1.inode == fs.inodes[inode2]);
     assert(typeof(i1) !== 'string');
     return fs;
 }
 
-function test_unlink() {
+async function test_unlink() {
     // Depends on test_link
-    fs = test_link();
-    fs.unlink("/newfile");
-    assert(fs.readdir("/").length == 1);
-    assert(fs.readdir("/")[0].filename == "newfile1");
-    fs.unlink("/newfile1");
-    assert(fs.readdir("/").length == 0);
+    fs = await test_link();
+    await fs.unlink("/newfile");
+    dirs = await fs.readdir("/");
+    assert(dirs.length == 1);
+    assert(dirs[0].filename == "newfile1");
+    await fs.unlink("/newfile1");
+    dirs = await fs.readdir("/");
+    assert(dirs.length == 0);
     return fs;
 }
 </script>
