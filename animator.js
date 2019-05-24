@@ -14,16 +14,19 @@ function FSAnimator(fs, canvas, block_limit) {
 
     this.registered_inodes = {};
     this.registered_blocks = {};
+
+    this.reading_blocks = [];
     this.selected_inodes = [];
 
     this.register_inode(0);
+    this.draw();
 }
 
 FSAnimator.prototype.draw = function() {
-	this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+	this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
     for (var i = 0; i < this.fs.num_inodes; i++) {
         this.ctx.beginPath();
-        this.ctx.rect(i * this.inode_width, 0, this.inode_width, this.ctx.canvas.height);
+        this.ctx.rect(i * this.inode_width, 0, this.inode_width, this.ctx.canvas.height / 2);
         if (this.registered_inodes[i]) {
             this.ctx.fillStyle = this.registered_inodes[i];
             this.ctx.fill();
@@ -35,15 +38,34 @@ FSAnimator.prototype.draw = function() {
 
     for (var i = 0; i < this.block_limit; i++) {
         this.ctx.beginPath();
-        this.ctx.rect(i * this.block_width, 0, this.block_width, this.ctx.canvas.height);
-        if (this.registered_blocks[i]) {
+        this.ctx.rect(i * this.block_width, 0, this.block_width, this.ctx.canvas.height / 2);
+        if (this.registered_blocks[i] != null) {
             this.ctx.fillStyle = this.registered_inodes[this.registered_blocks[i]];
             this.ctx.fill();
         }
         this.ctx.stroke();
     }
 
+    var read_count = 0;
+    while (read_count < this.block_limit/2 && this.reading_blocks.length) {
+        read_count++;
+        var i = this.reading_blocks.shift();
+        console.log("Operating on block", i);
+        this.ctx.globalAlpha = 0.2;
+        this.ctx.beginPath();
+        this.ctx.rect(i * this.block_width, 0, this.block_width, this.ctx.canvas.height / 2);
+        if (this.registered_blocks[i] != null) {
+            this.ctx.fillStyle = "black";
+            this.ctx.fill();
+        }
+        this.ctx.globalAlpha = 1;
+        this.ctx.stroke();
+    }
+
     this.ctx.translate(-1 * this.canvas.width * 0.25, 0);
+
+    var that = this;
+    setTimeout(() => { that.draw() }, this.duration);
 };
 
 // https://stackoverflow.com/questions/1484506/random-color-generator
@@ -56,28 +78,33 @@ function getRandomColor() {
   return color;
 }
 
-FSAnimator.prototype.redraw = () => {};
+FSAnimator.prototype.read_block = function (blocknum){
+    this.reading_blocks.push(blocknum);
+};
 
-FSAnimator.prototype.highlight_block = () => {};
-FSAnimator.prototype.read_block_at = () => {};
-FSAnimator.prototype.register_block_to_inode = function (inodenum, blocknum) {
+FSAnimator.prototype.register_block_to_inode = function (inodenum, blocknum){
     this.registered_blocks[blocknum] = inodenum;
-    this.draw();
 };
 
-FSAnimator.prototype.deregister_block = () => {};
-
-FSAnimator.prototype.deregister_inode = function (inodenum) {
-    this.registered_inodes[inodenum] = false;
-    this.draw();
+FSAnimator.prototype.deregister_block = function (blocknum){
+    //this.after_pending_operations(function (){
+        this.registered_blocks[blocknum] = null;
+    //})
 };
 
-FSAnimator.prototype.register_inode = function (inodenum) {
-    console.log("Registered", inodenum);
-    var color = getRandomColor();
-    this.registered_inodes[inodenum] = color;
-    this.draw();
+FSAnimator.prototype.deregister_inode = function (inodenum){
+    //this.after_pending_operations(function (){
+        this.registered_inodes[inodenum] = null;
+    //});
 };
 
-FSAnimator.prototype.select_inode = function (inodenum) {
+FSAnimator.prototype.register_inode = function (inodenum){
+    //this.after_pending_operations(function (){
+        console.log("Registered", inodenum);
+        var color = getRandomColor();
+        this.registered_inodes[inodenum] = color;
+    //});
+};
+
+FSAnimator.prototype.select_inode = function (inodenum){
 };
