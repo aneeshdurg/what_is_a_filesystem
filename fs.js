@@ -216,8 +216,8 @@ MyFS.prototype.get_nth_blocknum_from_inode = function(inode, n) {
 
 MyFS.prototype.unlink = function(path) {
     var inodenum = this.inode_of(path);
-    if (typeof(inode) == 'string')
-        return inode;
+    if (typeof(inodenum) == 'string')
+        return inodenum;
 
     inode = this.inodes[inodenum];
     if (this.animations)
@@ -253,6 +253,11 @@ MyFS.prototype.unlink = function(path) {
 
         currblock++;
     }
+
+    // Erase currblock
+    var disk_offset = this.get_nth_blocknum_from_inode(parent_inode, currblock) * this.block_size;
+    var dirent_block = new Uint8Array(this.disk, disk_offset, this.dirent_size);
+    dirent_block.fill(0);
 
     // Now we have to move all blocks after the current one back by 1 block
     var prevblock = currblock;
@@ -342,7 +347,7 @@ MyFS.prototype.create = function (filename, mode, inode) {
             }
         }
         if (found_inode == -1)
-            return "ENOSPC";
+            return "ENOSPC: inode";
 
         if (this.animations)
             this.animations.register_inode(found_inode);
@@ -391,11 +396,16 @@ MyFS.prototype.create = function (filename, mode, inode) {
     }
 
     var disk_offset = new_block * this.block_size;
+
     var dirent_inodenum = new Uint8Array(this.disk, disk_offset, 1);
     dirent_inodenum[0] = found_inode;
+
     var dirent_filename = new Uint8Array(this.disk, disk_offset + 1, this.dirent_size - 1);
     for(var i = 0; i < split_filename[1].length; i++)
         dirent_filename[i] = split_filename[1].charCodeAt(i);
+    for(var i = split_filename[1].length; i < (this.dirent_size - 1); i++)
+        dirent_filename[i] = 0;
+
     parent_inode.filesize += this.dirent_size;
 
     // Mark inode as used
@@ -405,6 +415,7 @@ MyFS.prototype.create = function (filename, mode, inode) {
 };
 
 MyFS.prototype.empty_inode = function (inodenum) {
+    console.log("Invoked empty_inode");
     var had_indirect = false;
     var blocknum = 0;
     while (this.inodes[inodenum].filesize > 0) {
@@ -426,6 +437,8 @@ MyFS.prototype.empty_inode = function (inodenum) {
 
     if (had_indirect)
         this.release_block(this.inodes[inodenum].indirect[0]);
+
+    console.log("Finished empty_inode");
 }
 
 MyFS.prototype.open = function (filename, flags, mode) {
