@@ -32,6 +32,12 @@ function Stat(path, inodenum, mode, is_directory, filesize) {
     this.mode = mode;
     this.is_directory = is_directory;
     this.filesize = filesize;
+    // TODO add atim, ctim, mtim, owner, group
+}
+
+function Dirent(inodenum, filename) {
+    this.inodenum = inodenum;
+    this.filename = filename;
 }
 
 function split_parent_of(child) {

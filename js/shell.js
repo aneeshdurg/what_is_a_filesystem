@@ -2,15 +2,19 @@
 function Command(input, stdout_path) {
     this.input = input;
 
-    var parts = this.input.split(" ").filter(x => x.length);
+    var parts = this.input.trim().split(" ").filter(x => x.length);
     var redirect_idx = parts.findIndex(x => x == '>');
-    var output = stdout_path;
+    this.output = stdout_path;
     if (redirect_idx >= 0) {
-        output = parts[redirect_idx + 1];
+        this.output = parts[redirect_idx + 1];
         parts = parts.splice(0, redirect_idx);
     }
     this.arguments = parts;
 }
+
+function str_to_bytes(str) {
+    return new Uint8Array(Array.from(str).map(x => x.charCodeAt(0)));
+};
 
 function ShellFS(shell) {
     this.shell = shell;
@@ -18,7 +22,7 @@ function ShellFS(shell) {
 inherit(ShellFS, DefaultFS);
 
 ShellFS.prototype.open = async function(path, mode) {
-    console.log("called sfs open");
+    console.log("called sfs open", path);
     if (path === "/stdout" || path === "/stdin" || path === "/stderr") {
         if (path !== "/stdin" && mode & O_RDONLY)
             return "EPERM";
@@ -55,8 +59,10 @@ ShellFS.prototype.read = async function (file, buffer){
 };
 
 ShellFS.prototype.write = function (file, buffer) {
+    console.log("shellfs write");
     var output_as_str = String.fromCharCode.apply(null, buffer);
-    this.shell.output.innerText.append(output_as_str);
+    this.shell.output.innerText += output_as_str;
+    console.log("completed write");
     return buffer.length;
 };
 
@@ -94,7 +100,7 @@ function Shell(fs, parent) {
         parent.appendChild(this.container);
     }
 
-    this.prompt = "> ";
+    this.prompt = (shell) => shell.current_dir + " $ ";
 }
 
 Shell.prototype._init = async function () {
@@ -143,22 +149,24 @@ Shell.prototype.process_input = function (key) {
 Shell.prototype.main = async function () {
     await this._init();
     while (true) {
-        this.output.innerText += this.prompt;
+        this.output.innerText += this.prompt(this);
         var command = "";
         var file = await this.filesystem.open(this.input_path);
-        console.log(file);
         while (!command.length || (command.slice(-1) != "\n")) {
             var buffer = new Uint8Array([0]);
             await this.filesystem.read(file, buffer);
             command += String.fromCharCode(buffer[0]);
         }
         console.log(command);
+        await this.run_command(command);
     }
 }
 
 Shell.prototype.run_command = async function (input) {
-    command = new Command(input);
-    command.output = this.fs.open(command.output);
+    command = new Command(input, this.output_path);
+    console.log("opening", command.output);
+    command.output = await this.filesystem.open(command.output);
+    console.log("output @", command.output);
 
     const possible_commands = [
         "cat",
@@ -183,12 +191,87 @@ Shell.prototype.run_command = async function (input) {
     return "Invalid command: `" + command.input + "`";
 }
 
-Shell.prototype.handle_cd = function(command) {
+Shell.prototype.path_join = function(path1, path2) {
+    if (path1.endsWith("/") && path2.startsWith("/"))
+        return path1 + path2.slice(1);
+
+    if (!path1.endsWith("/") && !path2.startsWith("/"))
+        return path1 + "/" + path2.slice(1);
+
+    return path1 + path2;
+};
+
+
+Shell.prototype.expand_path = function(path) {
+    // TODO rewrite using path_join
+    var curr_dir = this.current_dir.split("/");
+    var parts = path.split("/");
+    if (parts[0] == "") {
+        curr_dir = [ "" ];
+    }
+
+    for (var i = 0; i < parts.length; i++) {
+        if (parts[i] == ".") {
+            continue;
+        } else if (parts[i] == ".." ) {
+            if (curr_dir.length > 1)
+                curr_dir = curr_dir.slice(0, -1);
+            else
+                curr_dir = [""];
+        } else
+            curr_dir.push(parts[i]);
+    }
+    var expanded_path = curr_dir.join("/")
+    if (expanded_path.startsWith("//")) {
+        expanded_path = expanded_path.slice(1);
+    }
+
+    if (!expanded_path.length)
+        expanded_path = "/";
+
+    return expanded_path;
+}
+
+Shell.prototype.handle_cd = async function(command) {
     if (command.arguments.length > 2) {
         command.stderr = "Too many arguments to cd!";
     }
 
-    this.current_dir = command.arguments[1];
+    var path = this.expand_path(command.arguments[1]);
+    var info = await this.filesystem.stat(path);
+    console.log("got stat", info);
+    var error = null;
+    if (typeof(info) === 'string') {
+        error = info;
+    } else if (!info.is_directory) {
+        // TODO also check execute permission
+        error = "ENOTDIR";
+
+    }
+
+    if (error) {
+        await this.filesystem.write(command.output, str_to_bytes(
+            "Error: " + error + "\n"));
+        return;
+    }
+
+    this.current_dir = path;
+}
+
+Shell.prototype.handle_mkdir = async function (command) {
+    errors = "";
+    for (var i = 1; i < command.arguments.length; i++) {
+        var path = this.expand_path(command.arguments[i]);
+        var output = await this.filesystem.mkdir(path, 0o777);
+        if (typeof(output) === 'string') {
+            errors += "Error creating directory '" + command.arguments[i] + "':"
+            errors += "\n\t" + output + "\n"
+        }
+    }
+
+    if (errors)
+        await this.filesystem.write(command.output, str_to_bytes(
+            "Error: " + error + "\n"));
 }
 
 Shell.prototype.handle_ls = async function(command) {
@@ -198,7 +281,7 @@ Shell.prototype.handle_ls = async function(command) {
     var show_inodes = false;
     var show_detailed = false;
 
-    function help() {
+    async function help() {
         const help_msg =
             "ls [options...] [path]\n" +
             "\t if path is empty, the current directory will be used instead\n" +
@@ -207,45 +290,106 @@ Shell.prototype.handle_ls = async function(command) {
             "\t\t-i show inode numbers\n" +
             "\t\t-l show all information\n" +
             "\t\t-h show this help message\n";
-        command.stderr = help_msg;
+        await this.filesystem.write(command.output, str_to_bytes(help_msg));
     }
 
-    const possible_options = [
-        ("a", () => { show_hidden = true; }),
-        ("h", help),
-        ("i", () => { show_inodes = true; }),
-        ("l", () => { show_all = true; }),
-    ];
+    const possible_options = {
+        a: () => { show_hidden = true; },
+        h: help,
+        i: () => { show_inodes = true; },
+        l: () => { show_detailed = true; },
+    };
 
     if (command.arguments.length >= 2) {
         var options = command.arguments.filter((x) => x.startsWith('-'));
         options = options.map((x) => Array.from(x.substring(1))).flat();
         // Remove duplicates
         options = Array.from(new Set(options));
-        //for (var i = 0; i < possible_options; i++) {
-        //    if (options.find(possible_options[i][0])) {
-        //        possible_options[i][1]();
-        //        if (possible_options[
-        //    }
-        //}
+        for (var i = 0; i < options.length; i++) {
+            if (possible_options[options[i]]) {
+                await possible_options[options[i]]();
+                if (options[i] == 'h')
+                    return;
+            }
+        }
+        command.arguments = command.arguments.filter((x) => !x.startsWith('-'));
     }
 
     if (command.arguments.length == 1) {
-        command.arguments.push_back(".")
+        command.arguments.push(".")
     }
 
     var path = this.expand_path(command.arguments[1]);
-    contents = await this.filesystem.readdir(path);
+    console.log("Ls path:", path);
+    var contents = await this.filesystem.readdir(path);
+    console.log("contents", contents);
 
-    if (command.output == "")
-        this.add_output(output);
-    else {
-        var file = this.filesystem.open(this.expand_path(command.output));
-        if (file.error != null) {
-            this.add_error("Failed to open " + command.output);
-            this.add_error(file.error);
-            return;
-        }
-        this.filesystem.write(fd, output);
+    console.log("Reading", path);
+    var curr_dir = await this.filesystem.stat(path);
+    if (typeof(curr_dir) === 'string') {
+        await this.filesystem.write(command.output, str_to_bytes(
+            "Error reading dir '.': " + curr_dir + "\n"));
+        return;
     }
+    var curr_dirent = new Dirent(curr_dir.inodenum, ".");
+
+    var parent_dir = await this.filesystem.stat(
+        this.expand_path(this.path_join(path, "/..")));
+    if (typeof(parent_dir) === 'string') {
+        await this.filesystem.write(command.output, str_to_bytes(
+            "Error reading dir '..': " + parent_dir + "\n"));
+        return;
+    }
+    var parent_dirent = new Dirent(parent_dir.inodenum, "..");
+
+    if (!show_hidden) {
+        contents = contents.filter(x => !x.filename.startsWith('.'));
+        console.log("nonhidden", contents)
+    }
+
+    var that = this;
+    async function default_line_formatter(x, _info) {
+        return x.filename;
+    };
+
+    async function detailed_line_formatter(x, _info) {
+        var full_path = that.expand_path(that.path_join(path, x.filename));
+        var info = null;
+        if (_info)
+            info = _info;
+        else
+            info = await that.filesystem.stat(full_path);
+
+        if (typeof(info) === 'string')
+            return "Error could not stat " + full_path + ":" + info;
+
+        var permissions = info.mode.toString(8);
+        return permissions + " " + info.filesize + " " + x.filename;
+    };
+
+    async function inode_line_formatter(x, _info) {
+        return x.inodenum + " " + x.filename;
+    };
+
+    async function detailed_inode_line_formatter(x) {
+        return x.inodenum + " " + await detailed_line_formatter(x);
+    };
+
+
+    var line_formatter = default_line_formatter;
+    if (show_detailed && show_inodes)
+        line_formatter = detailed_inode_line_formatter;
+    else if (show_inodes)
+        line_formatter = inode_line_formatter;
+    else if (show_detailed)
+        line_formatter = detailed_inode_line_formatter;
+
+    var output = "";
+    output += await line_formatter(curr_dirent, curr_dir) + "\n";
+    output += await line_formatter(parent_dirent, parent_dir) + "\n";
+    for (var i = 0; i < contents.length; i++) {
+        output += await line_formatter(contents[i]) + "\n";
+    }
+
+    await this.filesystem.write(command.output, str_to_bytes(output));
 }

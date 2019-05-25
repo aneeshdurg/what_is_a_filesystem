@@ -8,6 +8,7 @@ function LayeredFilesystem() {
 inherit(LayeredFilesystem, DefaultFS);
 
 LayeredFilesystem.prototype.get_mountpoint_of_path = function (path) {
+    console.log(path);
     if (this.mountpoints[path])
         return path;
 
@@ -42,6 +43,7 @@ LayeredFilesystem.prototype.mount = async function(dir, fs) {
         return "ENOTDIR";
 
     this.mountpoints[dir] = fs;
+    return 0;
 }
 
 function __gen_LayeredFilesystem_callback_1(name) {
