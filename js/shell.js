@@ -59,10 +59,10 @@ ShellFS.prototype.read = async function (file, buffer){
 };
 
 ShellFS.prototype.write = function (file, buffer) {
-    console.log("shellfs write");
     var output_as_str = String.fromCharCode.apply(null, buffer);
     this.shell.output.innerText += output_as_str;
-    console.log("completed write");
+
+    this.shell.container.scrollTop = this.shell.container.scrollHeight;
     return buffer.length;
 };
 
@@ -82,6 +82,11 @@ function Shell(fs, parent) {
     var that = this;
     this.container = document.createElement("div");
     this.container.tabIndex = "0";
+    this.container.style.maxHeight = "500px";
+    this.container.style.overflow = "scroll";
+    //this.container.style.height = "20%";
+    //this.container.style.overflow = "scroll";
+
     this.output = document.createElement("pre");
     this.container.addEventListener("click", function(e) { that.container.focus(); }, false);
     function stop_event(e) {

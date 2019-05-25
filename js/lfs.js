@@ -1,8 +1,8 @@
 // requires fs.js
 
-function LayeredFilesystem() {
+function LayeredFilesystem(canvas) {
     this.mountpoints = {};
-    var fs = new MyFS();
+    var fs = new MyFS(canvas);
     this.mountpoints["/"] = fs;
 }
 inherit(LayeredFilesystem, DefaultFS);
