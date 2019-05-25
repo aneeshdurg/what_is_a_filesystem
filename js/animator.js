@@ -12,8 +12,8 @@ function FSAnimator(fs, canvas, block_limit) {
     this.inode_space = 0.35;
     this.block_limit = Math.min(block_limit, this.fs.num_blocks);
 
-    this.inode_width = Math.ceil(this.canvas.width * this.inode_space / this.fs.num_inodes);
-    this.block_width = Math.ceil(this.canvas.width * (1 -this.inode_space) / this.block_limit);
+    this.inode_width = this.canvas.width * this.inode_space / this.fs.num_inodes;
+    this.block_width = this.canvas.width * (1 - this.inode_space) / this.block_limit;
 
     this.tasks = [];
 
