@@ -5,10 +5,10 @@ function assert(cond) {
         throw Error("Assertion failed!");
 }
 
-function run_test(test) {
+async function run_test(test) {
     var return_val = null;
     try {
-        return_val = test();
+        return_val = await test();
     } catch (err) {
         console.log(err);
     }

@@ -1,52 +1,29 @@
 <script src="test.js"></script>
 <script src="utils.js"></script>
 <script src="fs.js"></script>
+<script src="lfs.js"></script>
 <script>
 
-window.onload = main;
+async function test_layered_fns() {
+    var lfs = new LayeredFilesystem();
+    var tmp = new MyFS();
+    await lfs.mkdir("/tmp", 0o777);
+    await lfs.mount("/tmp", tmp);
 
-function assert(cond) {
-    if (!cond)
-        throw Error("Assertion failed!");
-}
+    await lfs.create("/asdf", 0o777);
+    assert((await lfs.readdir("/")).length == 2);
+    console.log(await lfs.readdir("/tmp"));
+    assert((await lfs.readdir("/tmp")).length == 0);
 
-async function run_test(test) {
-    var return_val = null;
-    try {
-        return_val = await test();
-    } catch (err) {
-        console.log(err);
-    }
-
-    if (return_val)
-        document.body.appendChild(
-            document.createTextNode(test.name + ": Success!"));
-    else
-        document.body.appendChild(
-            document.createTextNode(test.name + ": Failed"));
-
-    document.body.appendChild(document.createElement("br"));
-}
-
-function gen_run_test(name) {
-    return () => { run_test(window[name]); };
-}
-
-function main() {
-    var testnames =
-        Object.getOwnPropertyNames(window).filter(
-            (x) => x.startsWith("test_"));
-    for (t in testnames) {
-        test_runner = document.createElement("button");
-    test_runner.onclick = gen_run_test(testnames[t]);
-            test_runner.appendChild(document.createTextNode(testnames[t]));
-        document.body.appendChild(test_runner);
-    }
-    document.body.appendChild(document.createElement("br"));
+    await lfs.create("/tmp/asdf", 0o777);
+    assert((await lfs.readdir("/tmp")).length == 1);
+	console.log((await tmp.readdir("/")));
+    assert((await tmp.readdir("/")).length == 1);
+	return lfs;
 }
 
 async function test_readdir() {
-    fs = new MyFS();
+    var fs = new MyFS();
     assert((await fs.readdir("/")).length == 0);
     await fs.open("/asdf", O_CREAT, 0o777);
     assert((await fs.readdir("/")).length == 1);

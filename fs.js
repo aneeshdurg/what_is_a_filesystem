@@ -1,79 +1,4 @@
-function LayeredFilesystem() {
-    this.mountpoints = {};
-}
-
-LayeredFilesystem.prototype.resolve_fs_and_path = function(path) {
-    var mountpoint = this.get_mountpoint_of_path(path);
-    var fs = this.mountpoints[mountpoint];
-    if (fs == null) {
-        return "ENOENT";
-    }
-
-    var relpath = path.slice(mountpoint.length)
-    return {
-        fs: fs,
-        relpath: relpath
-    };
-}
-
-LayeredFilesystem.prototype.mount = async function(dir, fs) {
-    //this.verify_fs(fs);
-    this.mountpoints[dir] = fs;
-}
-
-function __gen_LayeredFilesystem_callback_1(name) {
-    eval("LayeredFilesystem.prototype." + name + "= async function (path) {" +
-        "  var resolved = this.resolve_fs_and_path(path);" +
-        "  if (typeof(resolved) === 'string') return resolved;" +
-        "  return resolved.fs." + name + "(resolved.relpath);" +
-        "};");
-}
-
-function __gen_LayeredFilesystem_callback_2_file(name) {
-    eval("LayeredFilesystem.prototype." + name + "= async function (file, arg2) {" +
-        "  return file.fs." + name + "(file, arg2);" +
-        "};");
-}
-
-function __gen_LayeredFilesystem_callback_2_resolve_1(name) {
-    eval("LayeredFilesystem.prototype." + name + "= async function (path, arg2) {" +
-        "  var resolved = this.resolve_fs_and_path(path);" +
-        "  if (typeof(resolved) === 'string') return resolved;" +
-        "  return resolved.fs." + name + "(resolved.relpath, arg2);" +
-        "};");
-}
-
-function __gen_LayeredFilesystem_callback_2_resolve_2(name) {
-    eval("LayeredFilesystem.prototype." + name + "= async function (path, path2) {" +
-        "  var resolved = this.resolve_fs_and_path(path);" +
-        "  var resolved2 = this.resolve_fs_and_path(path2);" +
-        "  if (typeof(resolved) === 'string') return resolved;" +
-        "  if (typeof(resolved2) === 'string') return resolved2;" +
-        "  if (resolved.fs != resolved2.fs) return 'EINVAL';" +
-        "  return resolved.fs." + name + "(resolved.relpath, resolved2.relpath);" +
-        "};");
-}
-function __gen_LayeredFilesystem_callback_3(name) {
-    eval("LayeredFilesystem.prototype." + name + "= async function (path, arg2, arg3) {" +
-        "  var resolved = this.resolve_fs_and_path(path);" +
-        "  if (typeof(resolved) === 'string') return resolved;" +
-        "  return resolved.fs." + name + "(resolved.relpath, arg2, arg3);" +
-        "};");
-}
-
-__gen_LayeredFilesystem_callback_1("close");
-__gen_LayeredFilesystem_callback_1("mkdir");
-__gen_LayeredFilesystem_callback_1("readdir");
-__gen_LayeredFilesystem_callback_1("stat");
-__gen_LayeredFilesystem_callback_1("unlink");
-
-__gen_LayeredFilesystem_callback_2_file("read");
-__gen_LayeredFilesystem_callback_2_file("write");
-
-__gen_LayeredFilesystem_callback_2_resolve_1("chmod");
-__gen_LayeredFilesystem_callback_2_resolve_2("link");
-
-__gen_LayeredFilesystem_callback_3("open");
+// requires utils.js
 
 // Paths cannot have trailing / or // anywhere
 // max filename length = 15
@@ -120,6 +45,8 @@ function MyFS(canvas) {
 
 
 }
+
+MyFS.prototype.mount = not_implemented;
 
 MyFS.prototype.readdir = async function (path) {
     path_arr = path.split('/');
@@ -192,8 +119,12 @@ MyFS.prototype.inode_of = async function (file){
     return "ENOENT";
 };
 
-MyFS.prototype.mount = not_implemented;
-MyFS.prototype.stat = not_implemented;
+MyFS.prototype.stat = async function(file) {
+    var inodenum = await this.inode_of(file);
+    var inode = this.inodes[inodenum];
+    var info = new Stat(file, inodenum, inode.permissions, inode.is_directory, inode.filesize);
+    return info;
+};
 
 // Undefined if the inode doesn't actually have n blocks.
 MyFS.prototype.get_nth_blocknum_from_inode = async function(inode, n) {
@@ -498,6 +429,7 @@ MyFS.prototype.link = async function(path1, path2) {
 };
 
 MyFS.prototype.mkdir = async function(name, mode) {
+    console.log(name, mode);
     var new_inode = await this.create(name, mode);
     if (typeof(new_inode) == 'string')
         return new_inode;
