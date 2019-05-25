@@ -1,9 +1,22 @@
+function inherit(A, B) {
+    A.prototype = Object.create(B.prototype);
+    Object.defineProperty(A.prototype, 'constructor', {
+        value: A,
+        enumerable: false,
+        writable: true
+    });
+}
+
 O_APPEND = 1;
 O_CREAT = 2;
 O_TRUNC = 4;
 O_RDONLY = 8;
 O_WRONLY = 16;
 O_RDWR = O_RDONLY | O_WRONLY;
+
+SEEK_SET = 0;
+SEEK_END = 1;
+SEEK_CURR = 2;
 
 function FileDescriptor(fs, path, inode, mode) {
     this.fs = fs;

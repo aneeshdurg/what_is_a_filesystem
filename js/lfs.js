@@ -5,6 +5,7 @@ function LayeredFilesystem() {
     var fs = new MyFS();
     this.mountpoints["/"] = fs;
 }
+inherit(LayeredFilesystem, DefaultFS);
 
 LayeredFilesystem.prototype.get_mountpoint_of_path = function (path) {
     if (this.mountpoints[path])
