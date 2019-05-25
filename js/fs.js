@@ -121,6 +121,9 @@ MyFS.prototype.readdir = async function (path) {
             var filename = new Uint8Array(this.disk, disk_offset + 1, this.dirent_size - 1);
             filename = String.fromCharCode.apply(null, filename).split("\u0000")[0];
             dir_contents.push(new Dirent(inodenum[0],  filename));
+            if (this.animations)
+                await this.animations.read_block(block_num);
+
 
             bytes_read += this.block_size;
         }
