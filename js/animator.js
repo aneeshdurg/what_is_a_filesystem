@@ -8,11 +8,12 @@ function FSAnimator(fs, canvas, block_limit) {
     this.ctx = canvas.getContext("2d");
     this.fs = fs;
     if (!block_limit)
-        block_limit = 100
+        block_limit = 50
+    this.inode_space = 0.35;
     this.block_limit = Math.min(block_limit, this.fs.num_blocks);
 
-    this.inode_width = Math.ceil(this.canvas.width * 0.25 / this.fs.num_inodes);
-    this.block_width = Math.ceil(this.canvas.width * 0.75 / this.block_limit);
+    this.inode_width = Math.ceil(this.canvas.width * this.inode_space / this.fs.num_inodes);
+    this.block_width = Math.ceil(this.canvas.width * (1 -this.inode_space) / this.block_limit);
 
     this.tasks = [];
 
@@ -49,7 +50,7 @@ FSAnimator.prototype.draw = function() {
         this.ctx.stroke();
     }
 
-    this.ctx.translate(this.canvas.width * 0.25, 0);
+    this.ctx.translate(this.canvas.width * this.inode_space, 0);
 
     for (var i = 0; i < this.block_limit; i++) {
         this.ctx.beginPath();
@@ -75,7 +76,7 @@ FSAnimator.prototype.draw = function() {
         this.ctx.stroke();
     }
 
-    this.ctx.translate(-1 * this.canvas.width * 0.25, 0);
+    this.ctx.translate(-1 * this.canvas.width * this.inode_space, 0);
 
     if (currtask) {
         currtask.resolve();
