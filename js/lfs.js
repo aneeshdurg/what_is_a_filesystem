@@ -25,7 +25,10 @@ LayeredFilesystem.prototype.resolve_fs_and_path = function(path) {
         return "ENOENT";
     }
 
-    var relpath = "/" + path.slice(mountpoint.length)
+    var relpath = path.slice(mountpoint.length)
+    if (!relpath.length || relpath[0] != "/")
+        relpath = "/" + relpath;
+
     return {
         fs: fs,
         relpath: relpath

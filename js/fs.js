@@ -56,17 +56,17 @@ function MyFS(canvas) {
         // TODO implement sticky bits and user/group model
     }
     // In reality the inodes should be part of the disk, but that's too much work to implement
-    this.inodes = new Array(this.num_inodes);
+    this._inodes = new Array(this.num_inodes);
     for (var i = 0; i < this.num_inodes; i++) {
-        this.inodes[i] = new Inode();
+        this._inodes[i] = new Inode();
     }
 
     // Create inode for "/"
-    this.inodes[0].is_directory = true;
-    this.inodes[0].num_links = 1;
-    this.inodes[0].permissions = 0o755;
+    this._inodes[0].is_directory = true;
+    this._inodes[0].num_links = 1;
+    this._inodes[0].permissions = 0o755;
 
-    this.max_filesize = (this.inodes[0].num_indirect * this.block_size + this.inodes[0].num_direct) * this.block_size;
+    this.max_filesize = (this._inodes[0].num_indirect * this.block_size + this._inodes[0].num_direct) * this.block_size;
     if (canvas) {
         this.animations = new FSAnimator(this, canvas);
     } else {
@@ -87,14 +87,14 @@ MyFS.prototype.readdir = async function (path) {
     var inode = null;
     while (i < path_arr.length) {
         if (dir_contents == null) {
-            inode = this.inodes[0];
+            inode = this._inodes[0];
             if (this.animations)
                 await this.animations.select_inode(0);
         } else {
             inode = null;
             for (var j = 0; j < dir_contents.length; j++) {
                 if (dir_contents[j].filename == path_arr[i]) {
-                    inode = this.inodes[dir_contents[j].inodenum];
+                    inode = this._inodes[dir_contents[j].inodenum];
                     break;
                 }
             }
@@ -150,7 +150,9 @@ MyFS.prototype.inode_of = async function (file){
 
 MyFS.prototype.stat = async function(file) {
     var inodenum = await this.inode_of(file);
-    var inode = this.inodes[inodenum];
+    if (typeof(inodenum) === 'string')
+        return inodenum;
+    var inode = this._inodes[inodenum];
     var info = new Stat(file, inodenum, inode.permissions, inode.is_directory, inode.filesize);
     return info;
 };
@@ -181,7 +183,7 @@ MyFS.prototype.unlink = async function(path) {
     if (inodenum == 0)
         return "EPERM";
 
-    inode = this.inodes[inodenum];
+    inode = this._inodes[inodenum];
     if (this.animations)
         await this.animations.select_inode(inode);
 
@@ -194,7 +196,7 @@ MyFS.prototype.unlink = async function(path) {
 
     var split_filename = split_parent_of(path);
     var parent_inodenum = await this.inode_of(split_filename[0]);
-    var parent_inode = this.inodes[parent_inodenum];
+    var parent_inode = this._inodes[parent_inodenum];
     if (this.animations)
         await this.animations.select_inode(parent_inodenum);
 
@@ -295,7 +297,7 @@ MyFS.prototype.create = async function (filename, mode, inode) {
     if (typeof(parent_inodenum) === 'string')
         return "ENOENT";
 
-    var parent_inode = this.inodes[parent_inodenum];
+    var parent_inode = this._inodes[parent_inodenum];
     if (!parent_inode.is_directory)
         return "ENOTDIR";
 
@@ -306,7 +308,7 @@ MyFS.prototype.create = async function (filename, mode, inode) {
     // if inode is 0 or undefined then we need to grab a fresh inode
     if (!inode) {
         for (var i = 1; i < this.num_inodes; i++) {
-            if (this.inodes[i].num_links == 0) {
+            if (this._inodes[i].num_links == 0) {
                 found_inode = i;
                 break;
             }
@@ -374,8 +376,8 @@ MyFS.prototype.create = async function (filename, mode, inode) {
     parent_inode.filesize += this.dirent_size;
 
     // Mark inode as used
-    this.inodes[found_inode].num_links += 1;
-    this.inodes[found_inode].permissions = mode;
+    this._inodes[found_inode].num_links += 1;
+    this._inodes[found_inode].permissions = mode;
     return found_inode;
 };
 
@@ -383,25 +385,25 @@ MyFS.prototype.empty_inode = async function (inodenum) {
     console.log("Invoked empty_inode");
     var had_indirect = false;
     var blocknum = 0;
-    while (this.inodes[inodenum].filesize > 0) {
-        if (blocknum < this.inodes[inodenum].num_direct) {
-            await this.release_block(this.inodes[inodenum].direct[blocknum]);
+    while (this._inodes[inodenum].filesize > 0) {
+        if (blocknum < this._inodes[inodenum].num_direct) {
+            await this.release_block(this._inodes[inodenum].direct[blocknum]);
         } else {
             had_indirect = true;
-            var indirect_block = this.inodes[inodenum].indirect[0];
+            var indirect_block = this._inodes[inodenum].indirect[0];
 
-            var indirect_index = blocknum - this.inodes[inodenum].num_direct;
+            var indirect_index = blocknum - this._inodes[inodenum].num_direct;
             var disk_offset = indirect_block * this.block_size + indirect_index;
 
             var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
             await this.release_block(indirect_entry[0]);
         }
-        this.inodes[inodenum].filesize -= Math.min(this.inodes[inodenum].filesize, this.block_size);
+        this._inodes[inodenum].filesize -= Math.min(this._inodes[inodenum].filesize, this.block_size);
         blocknum++;
     }
 
     if (had_indirect)
-        await this.release_block(this.inodes[inodenum].indirect[0]);
+        await this.release_block(this._inodes[inodenum].indirect[0]);
 
     console.log("Finished empty_inode");
 }
@@ -426,7 +428,7 @@ MyFS.prototype.open = async function (filename, flags, mode) {
     if (flags & O_APPEND)
         flags |= O_WRONLY;
 
-    var filedes = new FileDescriptor(this, filename, this.inodes[inodenum], flags & O_RDWR);
+    var filedes = new FileDescriptor(this, filename, this._inodes[inodenum], flags & O_RDWR);
     if (flags & O_APPEND)
         filedes.offset = filedes.inode.filesize;
 
@@ -439,7 +441,7 @@ MyFS.prototype.chmod = async function(path, permissions) {
     var inodenum = await this.inode_of(path);
     if (typeof(inodenum) == 'string')
         return inodenum;
-    this.inodes[inodenum].permissions = permissions;
+    this._inodes[inodenum].permissions = permissions;
 
     if (this.animations)
         await this.animations.select_inode(inodenum);
@@ -455,7 +457,7 @@ MyFS.prototype.link = async function(path1, path2) {
     if (this.animations)
         await this.animations.select_inode(inodenum);
 
-    return this.create(path2, this.inodes[inodenum].permissions, inodenum);
+    return this.create(path2, this._inodes[inodenum].permissions, inodenum);
 };
 
 MyFS.prototype.mkdir = async function(name, mode) {
@@ -464,13 +466,13 @@ MyFS.prototype.mkdir = async function(name, mode) {
     if (typeof(new_inode) == 'string')
         return new_inode;
 
-    this.inodes[new_inode].is_directory = true;
+    this._inodes[new_inode].is_directory = true;
     return new_inode;
 };
 
 MyFS.prototype.ensure_min_blockcount = async function (inode, blockcount) {
 
-    var inodenum = this.inodes.findIndex((x) => x == inode);
+    var inodenum = this._inodes.findIndex((x) => x == inode);
 
     console.log("invoked ensure_min_blockcount", inode);
     var currblocks = Math.ceil(inode.filesize / this.block_size);
