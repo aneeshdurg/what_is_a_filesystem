@@ -1,4 +1,4 @@
-// requires utils.js
+// requires fs_helper.js
 function DefaultFS(){};
 DefaultFS.prototype.mount = not_implemented;
 DefaultFS.prototype.readdir = not_implemented;
