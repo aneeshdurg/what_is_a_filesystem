@@ -15,7 +15,7 @@ Shell.prototype.handle_ls = async function(command) {
             "\t\t-i show inode numbers\n" +
             "\t\t-l show all information\n" +
             "\t\t-h show this help message\n";
-        await that.filesystem.write(command.output, str_to_bytes(help_msg));
+        await that.filesystem.write(that.stderr, str_to_bytes(help_msg));
     }
 
     const possible_options = {

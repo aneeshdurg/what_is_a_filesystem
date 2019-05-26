@@ -35,10 +35,6 @@ function Command(input, stdout_path) {
     this.arguments = parts;
 }
 
-function str_to_bytes(str) {
-    return new Uint8Array(Array.from(str).map(x => x.charCodeAt(0)));
-};
-
 function ShellFS(shell) {
     this.shell = shell;
 };

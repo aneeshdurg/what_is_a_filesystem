@@ -54,3 +54,11 @@ function split_parent_of(child) {
 function not_implemented() {
     return "EIMPL";
 }
+
+function bytes_to_str(bytes) {
+    return String.fromCharCode.apply(null, bytes);
+}
+
+function str_to_bytes(str) {
+    return new Uint8Array(Array.from(str).map(x => x.charCodeAt(0)));
+}
