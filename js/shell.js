@@ -11,7 +11,6 @@ const possible_commands = [
         "rm",
         "stat",
         "touch",
-        "wc",
     ]
 
 // command syntax: [args] (> file(+offset))
