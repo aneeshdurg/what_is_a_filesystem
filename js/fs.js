@@ -251,7 +251,7 @@ MyFS.prototype.unlink = async function(path) {
     // decrement size and remove last block
     var lastblock_num = await this.get_nth_blocknum_from_inode(parent_inode, num_blocks - 1);
     await this.release_block(lastblock_num);
-    if ((num_blocks - 1) < parent_inode.num_direct)
+    if ((num_blocks - 1) == parent_inode.num_direct)
         await this.release_block(parent_inode.indirect[0]);
 
     parent_inode.filesize -= this.block_size;

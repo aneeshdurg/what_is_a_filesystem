@@ -306,7 +306,7 @@ Shell.prototype.path_join = function(path1, path2) {
         return path1 + path2.slice(1);
 
     if (!path1.endsWith("/") && !path2.startsWith("/"))
-        return path1 + "/" + path2.slice(1);
+        return path1 + "/" + path2;
 
     return path1 + path2;
 };

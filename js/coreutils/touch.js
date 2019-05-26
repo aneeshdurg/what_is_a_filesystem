@@ -1,6 +1,5 @@
 // TODO revisit this when mtim is implemented
 Shell.prototype.handle_touch = async function(command) {
-    console.log("Called touch", command);
     if (command.arguments.length < 2)
         return this._return_error("touch requires a filename!");
 

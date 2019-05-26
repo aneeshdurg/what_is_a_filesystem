@@ -10,5 +10,5 @@ Shell.prototype.handle_mkdir = async function (command) {
     }
 
     if (errors)
-        return this._return_error(error);
+        return this._return_error(errors);
 }
