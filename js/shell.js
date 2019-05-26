@@ -152,6 +152,8 @@ Shell.prototype._init = async function () {
     this.error_path = this.shellfs_root + "/stderr"
     this.input_path = this.shellfs_root + "/stdin"
 
+    this.stderr = await this.filesystem.open(this.error_path);
+
 
     var coreutils_scripts = possible_commands.map(x => "/js/coreutils/" + x + ".js");
     var coreutils_promises = [];
@@ -171,11 +173,22 @@ Shell.prototype._init = async function () {
     }
 }
 
+Shell.prototype.fd_is_stdin = function (fd) {
+    var is_input = fd.fs == this.shellfs;
+    is_input = is_input && this.path_join(this.shellfs_root, fd.path);
+    return is_input;
+}
 
 Shell.prototype.fd_is_stdout = function (fd) {
     var is_stdout = fd.fs == this.shellfs;
     is_stdout = is_stdout && this.path_join(this.shellfs_root, fd.path);
     return is_stdout;
+}
+
+Shell.prototype.fd_is_stderr = function (fd) {
+    var is_error = fd.fs == this.shellfs;
+    is_error = is_error && this.path_join(this.shellfs_root, fd.path);
+    return is_error;
 }
 
 Shell.prototype.process_input = function (key, ctrlkey) {
@@ -334,7 +347,7 @@ Shell.prototype.expand_path = function(path) {
 }
 
 Shell.prototype._return_error = async function(error) {
-    await this.filesystem.write(command.output, str_to_bytes(
+    await this.filesystem.write(this.stderr, str_to_bytes(
             "Error: " + error + "\n"));
     return error;
 };
