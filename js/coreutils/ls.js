@@ -1,28 +1,3 @@
-Shell.prototype.handle_cd = async function(command) {
-    if (command.arguments.length > 2) {
-        command.stderr = "Too many arguments to cd!";
-    }
-
-    var path = this.expand_path(command.arguments[1]);
-    var info = await this.filesystem.stat(path);
-    var error = null;
-    if (typeof(info) === 'string') {
-        error = info;
-    } else if (!info.is_directory) {
-        // TODO also check execute permission
-        error = "ENOTDIR";
-
-    }
-
-    if (error) {
-        await this.filesystem.write(command.output, str_to_bytes(
-            "Error: " + error + "\n"));
-        return;
-    }
-
-    this.current_dir = path;
-}
-
 Shell.prototype.handle_ls = async function(command) {
     var argument = "";
     var output = " ";
@@ -30,6 +5,7 @@ Shell.prototype.handle_ls = async function(command) {
     var show_inodes = false;
     var show_detailed = false;
 
+    var that = this;
     async function help() {
         const help_msg =
             "ls [options...] [path]\n" +
@@ -39,7 +15,7 @@ Shell.prototype.handle_ls = async function(command) {
             "\t\t-i show inode numbers\n" +
             "\t\t-l show all information\n" +
             "\t\t-h show this help message\n";
-        await this.filesystem.write(command.output, str_to_bytes(help_msg));
+        await that.filesystem.write(command.output, str_to_bytes(help_msg));
     }
 
     const possible_options = {
@@ -72,20 +48,16 @@ Shell.prototype.handle_ls = async function(command) {
     var contents = await this.filesystem.readdir(path);
 
     var curr_dir = await this.filesystem.stat(path);
-    if (typeof(curr_dir) === 'string') {
-        await this.filesystem.write(command.output, str_to_bytes(
-            "Error reading dir '.': " + curr_dir + "\n"));
-        return;
-    }
+    if (typeof(curr_dir) === 'string')
+        return this._return_error("Could not read dir '.' (" + curr_dir + ")");
+
     var curr_dirent = new Dirent(curr_dir.inodenum, ".");
 
-    var parent_dir = await this.filesystem.stat(
-        this.expand_path(this.path_join(path, "/..")));
-    if (typeof(parent_dir) === 'string') {
-        await this.filesystem.write(command.output, str_to_bytes(
-            "Error reading dir '..': " + parent_dir + "\n"));
-        return;
-    }
+    var parent_path = this.expand_path(this.path_join(path, "/.."));
+    var parent_dir = await this.filesystem.stat(parent_path);
+    if (typeof(parent_dir) === 'string')
+        return this._return_error("Could not read dir '.' (" + parent_dir + ")");
+
     var parent_dirent = new Dirent(parent_dir.inodenum, "..");
 
     if (!show_hidden)
@@ -136,34 +108,4 @@ Shell.prototype.handle_ls = async function(command) {
     }
 
     await this.filesystem.write(command.output, str_to_bytes(output));
-}
-
-Shell.prototype.handle_mkdir = async function (command) {
-    errors = "";
-    for (var i = 1; i < command.arguments.length; i++) {
-        var path = this.expand_path(command.arguments[i]);
-        var output = await this.filesystem.mkdir(path, 0o777);
-        if (typeof(output) === 'string') {
-            errors += "Error creating directory '" + command.arguments[i] + "':"
-            errors += "\n\t" + output + "\n"
-        }
-    }
-
-    if (errors)
-        await this.filesystem.write(command.output, str_to_bytes(
-            "Error: " + error + "\n"));
-}
-
-// TODO revisit this when mtim is implemented
-Shell.prototype.handle_touch = async function(command) {
-    console.log("Called touch", command);
-    if (command.arguments.length < 2)
-        await this.filesystem.write(command.output, str_to_bytes(
-            "touch requires a filename!\n"));
-    for (var i = 1; i < command.arguments.length; i++) {
-        var error = await this.filesystem.create(this.expand_path(command.arguments[i]), this.umask);
-        if (typeof(error) === 'string' && error != 'EEXISTS')
-            await this.filesystem.write(command.output, str_to_bytes(
-                "Error touching file " + command.arguments[i] + ": " + error + "\n"));
-    }
 }

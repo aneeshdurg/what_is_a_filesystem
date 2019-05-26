@@ -1,3 +1,19 @@
+const possible_commands = [
+        "cat",
+        "cd",
+        "echo",
+        "file",
+        "link",
+        "ls",
+        "mkdir",
+        "mount",
+        "replace", // replace str1 str2 (replaces str1 in stdin with str2 in stdout)
+        "rm",
+        "stat",
+        "touch",
+        "wc",
+    ]
+
 // command syntax: [args] (> file(+offset))
 function Command(input, stdout_path) {
     this.input = input;
@@ -22,7 +38,6 @@ function ShellFS(shell) {
 inherit(ShellFS, DefaultFS);
 
 ShellFS.prototype.open = async function(path, mode) {
-    console.log("called sfs open", path);
     if (path === "/stdout" || path === "/stdin" || path === "/stderr") {
         if (path !== "/stdin" && mode & O_RDONLY)
             return "EPERM";
@@ -33,7 +48,6 @@ ShellFS.prototype.open = async function(path, mode) {
         var f = new FileDescriptor(this, path, null, mode);
         return f;
     }
-    console.log("Not found:", path);
     return "ENOENT";
 };
 ShellFS.prototype.close = fd => {};
@@ -43,12 +57,15 @@ ShellFS.prototype.read = async function (file, buffer){
     // read from stdin, using this.shell.reader to block if necessary
     var bytes_to_read = buffer.length;
     var bytes_read = 0;
-    while (bytes_read < bytes_to_read) {
-        while (!this.shell.stdin.length) {
+    while (!this.shell.stdin_closed && bytes_read < bytes_to_read) {
+        while (!this.shell.stdin.length && !this.shell.stdin_closed) {
             var shell = this.shell;
             var p = new Promise(resolve => { shell.reader = resolve; });
             await p;
         }
+
+        if (this.shell.stdin_closed)
+            break;
 
         var c = this.shell.stdin.shift();
         buffer[bytes_read] = c.charCodeAt(0);
@@ -80,6 +97,7 @@ function Shell(fs, parent) {
     // it to be resolved
     this.stdin_buffer = [];
     this.stdin = [];
+    this.stdin_closed = false;
     this.reader = null;
 
     this.container = null;
@@ -106,7 +124,7 @@ Shell.prototype.setup_container_and_output = function(parent) {
     this.container.addEventListener("keyup", stop_event);
     this.container.addEventListener("keydown", function(e) {
         stop_event(e);
-        that.process_input(e.key);
+        that.process_input(e.key, e.ctrlKey);
     }, false);
     this.container.appendChild(this.output);
 
@@ -119,21 +137,40 @@ Shell.prototype.setup_container_and_output = function(parent) {
 Shell.prototype._init = async function () {
     const shellfs_root = "/.shellfs";
     var s = await this.filesystem.mkdir(shellfs_root, 0o777);
-    console.log("mkdir", s);
-    console.log(await this.filesystem.readdir("/"));
     s = await this.filesystem.mount(shellfs_root, new ShellFS(this));
-    console.log("mount", s);
     this.output_path = shellfs_root + "/stdout"
     this.error_path = shellfs_root + "/stderr"
     this.input_path = shellfs_root + "/stdin"
+
+
+    var coreutils_scripts = possible_commands.map(x => "/js/coreutils/" + x + ".js");
+    var coreutils_promises = [];
+    for (src of coreutils_scripts) {
+        var resolve = null;
+        var p = new Promise(r => resolve = r);
+        coreutils_promises.push(p)
+
+        var script_el = document.createElement("script");
+        script_el.src = src;
+        script_el.onload = resolve;
+        document.head.appendChild(script_el);
+    }
+
+    for (p of coreutils_promises) {
+        await p;
+        console.log("Got p");
+    }
 }
 
-Shell.prototype.process_input = function (key) {
+Shell.prototype.process_input = function (key, ctrlkey) {
     var flush = false
     var to_append = null;
-    console.log(key, this.history, this.history_index);
     if (key.length == 1) {
-        to_append = key;
+        if (ctrlkey && key == 'd') {
+            this.stdin_closed = true;
+        } else {
+            to_append = key;
+        }
     } else if (key === "Enter") {
         to_append = "\n";
         flush = true;
@@ -205,11 +242,14 @@ Shell.prototype.main = async function () {
         var command = "";
         var file = await this.filesystem.open(this.input_path);
         while (!command.length || (command.slice(-1) != "\n")) {
+            // Ignore closed stdin
+            this.stdin_closed = false;
+
             var buffer = new Uint8Array([0]);
-            await this.filesystem.read(file, buffer);
-            command += String.fromCharCode(buffer[0]);
+            var e = await this.filesystem.read(file, buffer);
+            if (e)
+                command += String.fromCharCode(buffer[0]);
         }
-        console.log(command);
         this.history.push(command);
         this.history_index = this.history.length - 1;
 
@@ -219,25 +259,7 @@ Shell.prototype.main = async function () {
 
 Shell.prototype.run_command = async function (input) {
     command = new Command(input, this.output_path);
-    console.log("opening", command.output);
     command.output = await this.filesystem.open(command.output);
-    console.log("output @", command.output);
-
-    const possible_commands = [
-        "cat",
-        "cd",
-        "echo",
-        "file",
-        "link",
-        "ls",
-        "mkdir",
-        "mount",
-        "replace", // replace str1 str2 (replaces str1 in stdin with str2 in stdout)
-        "rm",
-        "stat",
-        "touch",
-        "wc",
-    ]
 
     for (var i = 0; i < possible_commands.length; i++) {
         if (command.arguments[0] == possible_commands[i])
@@ -286,3 +308,11 @@ Shell.prototype.expand_path = function(path) {
 
     return expanded_path;
 }
+
+Shell.prototype._return_error = async function(error) {
+    await this.filesystem.write(command.output, str_to_bytes(
+            "Error: " + error + "\n"));
+    return error;
+};
+
+
