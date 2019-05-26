@@ -1,9 +1,9 @@
 ---
 layout: post
-title:  "Test"
+title:  "Filesystem"
 ---
 
-This is a simple test.
+This is our filesystem model.
 
 
 <canvas id="myCanvas"></canvas>

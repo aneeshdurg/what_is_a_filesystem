@@ -1,6 +1,6 @@
 ---
 layout: post
-title: shell
+title: Shell
 ---
 
 This is our shell:
