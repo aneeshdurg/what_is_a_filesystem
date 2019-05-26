@@ -34,7 +34,6 @@ function FSAnimator(fs, canvas, block_limit) {
 FSAnimator.prototype.draw = function() {
     var currtask = null;
     if (this.tasks.length) {
-        console.log("Draw had a task!");
         currtask = this.tasks.shift();
         currtask.callback.call(this);
     }
@@ -64,7 +63,6 @@ FSAnimator.prototype.draw = function() {
 
     while (this.reading_blocks.length) {
         var i = this.reading_blocks.shift();
-        console.log("Operating on block", i);
         this.ctx.globalAlpha = 0.2;
         this.ctx.beginPath();
         this.ctx.rect(i * this.block_width, 0, this.block_width, this.ctx.canvas.height / 2);
@@ -80,7 +78,6 @@ FSAnimator.prototype.draw = function() {
 
     if (currtask) {
         currtask.resolve();
-        console.log("Resolved a task");
     }
 };
 
@@ -98,7 +95,6 @@ FSAnimator.prototype.submitTask = async function (callback){
     promise_collector = []
     p = new Promise(resolve => promise_collector.push(resolve));
     while (promise_collector.length == 0) {};
-    console.log(promise_collector, p);
 
     task = new Task(promise_collector[0], callback);
     this.tasks.push(task);
@@ -110,7 +106,6 @@ FSAnimator.prototype.read_block = async function (blocknum){
         this.reading_blocks.push(blocknum);
     }
     var p =  this.submitTask(callback);
-    console.log(p);
     await p;
 };
 
@@ -137,12 +132,10 @@ FSAnimator.prototype.deregister_inode = async function (inodenum){
 
 FSAnimator.prototype.register_inode = async function (inodenum){
     function callback(){
-        console.log("Registered", inodenum);
         var color = getRandomColor();
         this.registered_inodes[inodenum] = color;
     }
     var p = this.submitTask(callback);
-    console.log(p);
     await p;
 };
 

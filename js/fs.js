@@ -138,7 +138,6 @@ MyFS.prototype.inode_of = async function (file){
         return 0;
 
     var split_filename = split_parent_of(file);
-    console.log(file, split_filename, split_filename[0]);
     var entries = await this.readdir(split_filename[0]);
     for (var i = 0; i < entries.length; i++) {
         if (entries[i].filename == split_filename[1]) {
@@ -333,12 +332,9 @@ MyFS.prototype.create = async function (filename, mode, inode) {
 
     // we know that curr_block isn't on the inode by our assumption
     var curr_block = Math.floor(parent_inode.filesize / this.block_size);
-    console.log("Curr block", curr_block);
     if (curr_block < parent_inode.num_direct) {
-        console.log("Appending to direct\n");
         parent_inode.direct[curr_block] = new_block;
     } else {
-        console.log("Appending to indirect\n");
         curr_block -= parent_inode.num_direct;
         if (!curr_block) {
             var indirect_block = this.get_new_block();
@@ -382,7 +378,6 @@ MyFS.prototype.create = async function (filename, mode, inode) {
 };
 
 MyFS.prototype.empty_inode = async function (inodenum) {
-    console.log("Invoked empty_inode");
     var had_indirect = false;
     var blocknum = 0;
     while (this._inodes[inodenum].filesize > 0) {
@@ -404,17 +399,13 @@ MyFS.prototype.empty_inode = async function (inodenum) {
 
     if (had_indirect)
         await this.release_block(this._inodes[inodenum].indirect[0]);
-
-    console.log("Finished empty_inode");
 }
 
 MyFS.prototype.open = async function (filename, flags, mode) {
     // TODO check permissions
     var inodenum = null;
     if ((flags & O_CREAT) && (await this.inode_of(filename)) === 'ENOENT') {
-        console.log("Creating");
         inodenum = await this.create(filename, mode);
-        console.log(inodenum);
     } else {
         inodenum = await this.inode_of(filename);
         if (typeof(inodenum) == 'string')
@@ -422,8 +413,10 @@ MyFS.prototype.open = async function (filename, flags, mode) {
     }
 
     // TODO check permissions (might not do this)
-    if ((flags & O_TRUNC) && (flags & O_WRONLY))
+    if ((flags & O_TRUNC) && (flags & O_WRONLY)) {
         await this.empty_inode(inodenum);
+        this._inodes[inodenum].filesize = 0;
+    }
 
     if (flags & O_APPEND)
         flags |= O_WRONLY;
@@ -461,7 +454,6 @@ MyFS.prototype.link = async function(path1, path2) {
 };
 
 MyFS.prototype.mkdir = async function(name, mode) {
-    console.log(name, mode);
     var new_inode = await this.create(name, mode);
     if (typeof(new_inode) == 'string')
         return new_inode;
@@ -474,7 +466,6 @@ MyFS.prototype.ensure_min_blockcount = async function (inode, blockcount) {
 
     var inodenum = this._inodes.findIndex((x) => x == inode);
 
-    console.log("invoked ensure_min_blockcount", inode);
     var currblocks = Math.ceil(inode.filesize / this.block_size);
 
     var blocks_to_add = blockcount - currblocks;
@@ -527,7 +518,6 @@ MyFS.prototype.ensure_min_blockcount = async function (inode, blockcount) {
 };
 
 MyFS.prototype.read_or_write = async function (filedes, buffer, is_read) {
-    console.log("invoked read_or_write");
     if (buffer.BYTES_PER_ELEMENT != 1)
         return "EINVAL";
 
@@ -540,7 +530,6 @@ MyFS.prototype.read_or_write = async function (filedes, buffer, is_read) {
     var final_filesize = null;
     if (!is_read) {
         final_filesize = Math.max(filedes.inode.filesize, total_bytes + filedes.offset);
-        console.log("Final filesize will be", final_filesize, total_bytes, filedes.offset);
         if (final_filesize > this.max_filesize)
             return "ENOSPC";
 
@@ -552,7 +541,6 @@ MyFS.prototype.read_or_write = async function (filedes, buffer, is_read) {
             return 0;
         total_bytes = Math.min(filedes.inode.filesize - filedes.offset, total_bytes);
     }
-    console.log("finished setup");
 
 
     var currblock = Math.floor(filedes.offset / this.block_size);
@@ -577,10 +565,8 @@ MyFS.prototype.read_or_write = async function (filedes, buffer, is_read) {
         total_bytes -= bytes_to_process;
         currblock++;
     }
-    console.log("copied remainder");
 
     while (total_bytes) {
-        console.log("copying block", currblock);
         var block = await this.get_nth_blocknum_from_inode(filedes.inode, currblock);
         var bytes_to_process = Math.min(this.block_size, total_bytes);
         var disk_offset = block * this.block_size;

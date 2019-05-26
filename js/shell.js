@@ -20,7 +20,14 @@ function Command(input, stdout_path) {
 
     var parts = this.input.trim().split(" ").filter(x => x.length);
     var redirect_idx = parts.findIndex(x => x == '>');
+    var append = false;
+    if (redirect_idx < 0) {
+        redirect_idx = parts.findIndex(x => x == '>>');
+        append = true;
+    }
+
     this.output = stdout_path;
+    this.append_output = append;
     if (redirect_idx >= 0) {
         this.output = parts[redirect_idx + 1];
         parts = parts.splice(0, redirect_idx);
@@ -135,12 +142,15 @@ Shell.prototype.setup_container_and_output = function(parent) {
 }
 
 Shell.prototype._init = async function () {
-    const shellfs_root = "/.shellfs";
-    var s = await this.filesystem.mkdir(shellfs_root, 0o777);
-    s = await this.filesystem.mount(shellfs_root, new ShellFS(this));
-    this.output_path = shellfs_root + "/stdout"
-    this.error_path = shellfs_root + "/stderr"
-    this.input_path = shellfs_root + "/stdin"
+    this.shellfs_root = "/.shellfs";
+    this.shellfs = new ShellFS(this);
+
+    var s = await this.filesystem.mkdir(this.shellfs_root, 0o777);
+    s = await this.filesystem.mount(this.shellfs_root, this.shellfs);
+
+    this.output_path = this.shellfs_root + "/stdout"
+    this.error_path = this.shellfs_root + "/stderr"
+    this.input_path = this.shellfs_root + "/stdin"
 
 
     var coreutils_scripts = possible_commands.map(x => "/js/coreutils/" + x + ".js");
@@ -158,8 +168,14 @@ Shell.prototype._init = async function () {
 
     for (p of coreutils_promises) {
         await p;
-        console.log("Got p");
     }
+}
+
+
+Shell.prototype.fd_is_stdout = function (fd) {
+    var is_stdout = fd.fs == this.shellfs;
+    is_stdout = is_stdout && this.path_join(this.shellfs_root, fd.path);
+    return is_stdout;
 }
 
 Shell.prototype.process_input = function (key, ctrlkey) {
@@ -258,8 +274,16 @@ Shell.prototype.main = async function () {
 }
 
 Shell.prototype.run_command = async function (input) {
-    command = new Command(input, this.output_path);
-    command.output = await this.filesystem.open(command.output);
+    var command = new Command(input, this.output_path);
+
+    var command_output = this.expand_path(command.output)
+    var open_flags = O_WRONLY | O_CREAT;
+    if (command.append_output)
+        open_flags |= O_APPEND;
+    else
+        open_flags |= O_TRUNC;
+
+    command.output = await this.filesystem.open(command_output, open_flags, this.umask);
 
     for (var i = 0; i < possible_commands.length; i++) {
         if (command.arguments[0] == possible_commands[i])

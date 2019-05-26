@@ -8,7 +8,6 @@ function LayeredFilesystem(canvas) {
 inherit(LayeredFilesystem, DefaultFS);
 
 LayeredFilesystem.prototype.get_mountpoint_of_path = function (path) {
-    console.log(path);
     if (this.mountpoints[path])
         return path;
 

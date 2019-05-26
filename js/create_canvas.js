@@ -1,5 +1,4 @@
 function create_canvas(id) {
-  console.log(id);
   var canvas = document.getElementById(id);
   var container = canvas.parentElement;
   var width = container.offsetWidth;
