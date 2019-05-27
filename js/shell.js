@@ -133,8 +133,8 @@ Shell.prototype.setup_container_and_output = function(parent) {
 
     this.container.addEventListener("keyup", stop_event);
     this.container.addEventListener("keydown", function(e) {
-        stop_event(e);
-        that.process_input(e.key, e.ctrlKey);
+        if(that.process_input(e.key, e.ctrlKey))
+            stop_event(e);
     }, false);
     this.container.appendChild(this.output);
 
@@ -184,6 +184,9 @@ Shell.prototype.process_input = function (key, ctrlkey) {
     if (key.length == 1) {
         if (ctrlkey && key == 'd') {
             this.stdin_closed = true;
+        } else if (ctrlkey) {
+            // TODO support paste
+            return false;
         } else {
             to_append = key;
         }
@@ -193,8 +196,7 @@ Shell.prototype.process_input = function (key, ctrlkey) {
     } else if (key === "Tab") {
         to_append = "\t";
     } else if (key === "Escape") {
-        this.container.parentElement.focus();
-        document.body.focus();
+        document.activeElement.blur();
     } else if (key === "Backspace") {
         if (this.stdin_buffer.length) {
             this.stdin_buffer.pop();
@@ -228,6 +230,8 @@ Shell.prototype.process_input = function (key, ctrlkey) {
                 this.history_index += 1;
             }
         }
+    } else {
+        return false;
     }
 
     if (to_append) {
@@ -243,6 +247,8 @@ Shell.prototype.process_input = function (key, ctrlkey) {
         this.reader();
         this.reader = null;
     }
+
+    return true;
 }
 
 Shell.prototype.scroll_container = async function () {
