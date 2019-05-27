@@ -8,6 +8,7 @@ DefaultFS.prototype.create = not_implemented;
 DefaultFS.prototype.open = not_implemented;
 DefaultFS.prototype.close = not_implemented;
 DefaultFS.prototype.chmod = not_implemented;
+DefaultFS.prototype.ioctl = not_implemented; // function ioctl(fd, request(, obj_data))
 DefaultFS.prototype.link = not_implemented;
 DefaultFS.prototype.mkdir = not_implemented;
 DefaultFS.prototype.write = not_implemented;
@@ -88,8 +89,6 @@ MyFS.prototype.readdir = async function (path) {
     while (i < path_arr.length) {
         if (dir_contents == null) {
             inode = this._inodes[0];
-            if (this.animations)
-                await this.animations.select_inode(0);
         } else {
             inode = null;
             for (var j = 0; j < dir_contents.length; j++) {
@@ -104,8 +103,6 @@ MyFS.prototype.readdir = async function (path) {
             } else if (!inode.is_directory) {
                 return "ENOTDIR";
             }
-            if (this.animations)
-                await this.animations.select_inode(inode);
         }
 
         dir_contents = [];
@@ -183,8 +180,6 @@ MyFS.prototype.unlink = async function(path) {
         return "EPERM";
 
     inode = this._inodes[inodenum];
-    if (this.animations)
-        await this.animations.select_inode(inode);
 
     inode.num_links--;
     if (inode.num_links == 0) {
@@ -196,8 +191,6 @@ MyFS.prototype.unlink = async function(path) {
     var split_filename = split_parent_of(path);
     var parent_inodenum = await this.inode_of(split_filename[0]);
     var parent_inode = this._inodes[parent_inodenum];
-    if (this.animations)
-        await this.animations.select_inode(parent_inodenum);
 
     // Find block number of dirent to be removed
     // This loop is gauranteed to find the inode since the case where the file
@@ -321,9 +314,6 @@ MyFS.prototype.create = async function (filename, mode, inode) {
         found_inode = inode;
     }
 
-    if (this.animations)
-        await this.animations.select_inode(inode);
-
     // time to append to the directory
     // We'll take advantage of the fact that dirent_size == block_size
     var new_block = this.get_new_block();
@@ -421,7 +411,8 @@ MyFS.prototype.open = async function (filename, flags, mode) {
     if (flags & O_APPEND)
         flags |= O_WRONLY;
 
-    var filedes = new FileDescriptor(this, filename, this._inodes[inodenum], flags & O_RDWR);
+    var filedes = new FileDescriptor(
+        this, filename, inodenum, this._inodes[inodenum], flags & O_RDWR);
     if (flags & O_APPEND)
         filedes.offset = filedes.inode.filesize;
 
@@ -436,8 +427,6 @@ MyFS.prototype.chmod = async function(path, permissions) {
         return inodenum;
     this._inodes[inodenum].permissions = permissions;
 
-    if (this.animations)
-        await this.animations.select_inode(inodenum);
     return 0;
 };
 
@@ -446,9 +435,6 @@ MyFS.prototype.link = async function(path1, path2) {
     var inodenum = await this.inode_of(path1);
     if (typeof(inodenum) == 'string')
         return inodenum;
-
-    if (this.animations)
-        await this.animations.select_inode(inodenum);
 
     return this.create(path2, this._inodes[inodenum].permissions, inodenum);
 };
@@ -599,4 +585,14 @@ MyFS.prototype.write = async function (filedes, buffer) {
 
 MyFS.prototype.read = async function (filedes, buffer) {
     return this.read_or_write(filedes, buffer, true);
+};
+
+MyFS.prototype.ioctl = async function (filedes, request, obj) {
+    if (request != IOCTL_SELECT_INODE)
+        return "EIMPL";
+
+    if (this.animations)
+        this.animations.select_inode(filedes.inodenum, filedes.inode);
+
+    return 0;
 };

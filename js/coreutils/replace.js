@@ -9,8 +9,11 @@ Shell.prototype.handle_replace = async function(command) {
     var input_file = await this.filesystem.open(this.input_path, O_RDONLY);
 
     var bufferlen = 16;
-    var out_is_stdout = this.fd_is_stdout(command.output);
-    var in_is_stdin = this.fd_is_stdin(input_file);
+    var out_is_stdout = await this.filesystem.ioctl(command.output, IOCTL_IS_TTY);
+    out_is_stdout = typeof(out_is_stdout) === 'number' && out_is_stdout == 0;
+
+    var in_is_stdin = await this.filesystem.ioctl(input_file, IOCTL_IS_TTY);
+    in_is_stdin = typeof(in_is_stdin) === 'number' && in_is_stdin == 0;
 
     if (out_is_stdout && in_is_stdin) {
         bufferlen = 1; // interactive mode

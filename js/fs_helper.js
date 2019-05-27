@@ -7,20 +7,24 @@ function inherit(A, B) {
     });
 }
 
-O_APPEND = 1;
-O_CREAT = 2;
-O_TRUNC = 4;
-O_RDONLY = 8;
-O_WRONLY = 16;
-O_RDWR = O_RDONLY | O_WRONLY;
+const O_APPEND = 1;
+const O_CREAT = 2;
+const O_TRUNC = 4;
+const O_RDONLY = 8;
+const O_WRONLY = 16;
+const O_RDWR = O_RDONLY | O_WRONLY;
 
-SEEK_SET = 0;
-SEEK_END = 1;
-SEEK_CURR = 2;
+const SEEK_SET = 0;
+const SEEK_END = 1;
+const SEEK_CURR = 2;
 
-function FileDescriptor(fs, path, inode, mode) {
+const IOCTL_IS_TTY = 0;
+const IOCTL_SELECT_INODE = 1;
+
+function FileDescriptor(fs, path, inodenum, inode, mode) {
     this.fs = fs;
     this.path = path;
+    this.inodenum = inodenum;
     this.inode = inode;
     this.mode = mode;
     this.offset = 0;

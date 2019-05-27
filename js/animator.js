@@ -139,5 +139,32 @@ FSAnimator.prototype.register_inode = async function (inodenum){
     await p;
 };
 
-FSAnimator.prototype.select_inode = async function (inodenum){
+FSAnimator.prototype.select_inode = function (inodenum, inode){
+  console.log("Selected " + (new Error()).stack);
+  this.ctx.translate(0, this.ctx.canvas.height / 2);
+  this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
+  this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
+  this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
+  this.ctx.fileeStyle = this.registered_inodes[inodenum];
+  this.ctx.fill();
+  this.ctx.stroke();
+
+  var w_offset = this.inode_width * 5 + 5;
+  var h_offset = 25;
+
+  var font_size = 20;
+  this.ctx.font = font_size + "px Arial";
+
+  this.ctx.fillText("Inode: " + inodenum, w_offset, h_offset);
+  h_offset += 20;
+
+  this.ctx.fillText("Filesize: " + inode.filesize, w_offset, h_offset);
+  h_offset += 20;
+
+  this.ctx.fillText("Direct: " + Array.from(inode.direct).join(" "), w_offset, h_offset);
+  h_offset += 20;
+
+  this.ctx.fillText("Indirect: " + Array.from(inode.indirect).join(" "), w_offset, h_offset);
+  h_offset += 20;
+  this.ctx.translate(0, -1 * this.ctx.canvas.height / 2);
 };

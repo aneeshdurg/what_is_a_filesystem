@@ -11,6 +11,7 @@ const possible_commands = [
         "rm",
         "stat",
         "touch",
+        "inodeinfo",
     ]
 
 // command syntax: [args] (> file(+offset))
@@ -47,12 +48,19 @@ ShellFS.prototype.open = async function(path, mode) {
         if (path === "/stdin" && mode & O_WRONLY)
             return "EPERM";
 
-        var f = new FileDescriptor(this, path, null, mode);
+        var f = new FileDescriptor(this, path, 0, null, mode);
         return f;
     }
     return "ENOENT";
 };
 ShellFS.prototype.close = fd => {};
+
+ShellFS.prototype.ioctl = async function (fd, request, obj){
+    if (request != IOCTL_IS_TTY)
+        return "EIMPL";
+
+    return 0;
+};
 
 // TODO implement EOF on stdin
 ShellFS.prototype.read = async function (file, buffer){
@@ -166,24 +174,6 @@ Shell.prototype._init = async function () {
     for (p of coreutils_promises) {
         await p;
     }
-}
-
-Shell.prototype.fd_is_stdin = function (fd) {
-    var is_input = fd.fs == this.shellfs;
-    is_input = is_input && this.path_join(this.shellfs_root, fd.path);
-    return is_input;
-}
-
-Shell.prototype.fd_is_stdout = function (fd) {
-    var is_stdout = fd.fs == this.shellfs;
-    is_stdout = is_stdout && this.path_join(this.shellfs_root, fd.path);
-    return is_stdout;
-}
-
-Shell.prototype.fd_is_stderr = function (fd) {
-    var is_error = fd.fs == this.shellfs;
-    is_error = is_error && this.path_join(this.shellfs_root, fd.path);
-    return is_error;
 }
 
 Shell.prototype.process_input = function (key, ctrlkey) {

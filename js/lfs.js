@@ -77,7 +77,7 @@ function __gen_LayeredFilesystem_callback_2_resolve_2(name) {
         "  return resolved.fs." + name + "(resolved.relpath, resolved2.relpath);" +
         "};");
 }
-function __gen_LayeredFilesystem_callback_3(name) {
+function __gen_LayeredFilesystem_callback_3_resolve_1(name) {
     eval("LayeredFilesystem.prototype." + name + "= async function (path, arg2, arg3) {" +
         "  var resolved = this.resolve_fs_and_path(path);" +
         "  if (typeof(resolved) === 'string') return resolved;" +
@@ -85,6 +85,11 @@ function __gen_LayeredFilesystem_callback_3(name) {
         "};");
 }
 
+function __gen_LayeredFilesystem_callback_3_file(name) {
+    eval("LayeredFilesystem.prototype." + name + "= async function (fd, arg2, arg3) {" +
+        "  return fd.fs." + name + "(fd, arg2, arg3);" +
+        "};");
+}
 __gen_LayeredFilesystem_callback_1("close");
 __gen_LayeredFilesystem_callback_1("readdir");
 __gen_LayeredFilesystem_callback_1("stat");
@@ -99,6 +104,6 @@ __gen_LayeredFilesystem_callback_2_resolve_1("mkdir");
 
 __gen_LayeredFilesystem_callback_2_resolve_2("link");
 
-__gen_LayeredFilesystem_callback_3("open");
+__gen_LayeredFilesystem_callback_3_file("ioctl");
 
-
+__gen_LayeredFilesystem_callback_3_resolve_1("open");
