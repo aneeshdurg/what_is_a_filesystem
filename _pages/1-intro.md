@@ -10,7 +10,7 @@ window.onload = function() {
     console.log("set up shell");
 
     var canvas = create_canvas('fs_vis');
-    var animated_fs = new LayeredFilesystem(canvas);
+    var animated_fs = new LayeredFilesystem(null, canvas);
     var animated_shell = new Shell(animated_fs, document.getElementById("shell_fs_parent"));
     animated_shell.main();
     console.log("set up animated shell");
@@ -27,6 +27,7 @@ For our purposes, we've implemented an in-browser shell for you to use.
 You can try it out below:
 
 <div id="shell_parent"></div>
+<br>
 
 Try clicking on the shell and typing `echo hello world!` to run your first command!
 
