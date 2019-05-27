@@ -119,7 +119,7 @@ Shell.prototype.setup_container_and_output = function(parent) {
     var that = this;
     this.container = document.createElement("div");
     this.container.tabIndex = "0";
-    this.container.style.maxHeight = "500px";
+    this.container.style.maxHeight = "250px";
     this.container.style.overflow = "scroll";
     //this.container.style.height = "20%";
     //this.container.style.overflow = "scroll";
@@ -177,6 +177,8 @@ Shell.prototype._init = async function () {
 }
 
 Shell.prototype.process_input = function (key, ctrlkey) {
+    this.scroll_container();
+
     var flush = false
     var to_append = null;
     if (key.length == 1) {
