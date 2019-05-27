@@ -10,7 +10,7 @@ Shell.prototype.handle_stat = async function(command) {
     var stat_str = "File: " + command.arguments[1] + "\n";
     stat_str += "Type: " + (info.is_directory ? "directory" : "regular file") + "\n";
     stat_str += "Size: " + info.filesize + "B\n";
-    stat_str += "Access: )o" + info.mode.toString(8) + "\n";
+    stat_str += "Access: 0o" + info.mode.toString(8) + "\n";
 
     var error = this.filesystem.write(command.output, str_to_bytes(stat_str));
     if (typeof(error) === 'string')

@@ -20,6 +20,7 @@ window.onload = function() {
 Welcome to `what is a filesystem`!
 The purpose of this interactive book is to help you learn and understand filesystems concepts.
 We will be following the content in UIUC's CS241's [coursebook](https://github.com/illinois-cs241/coursebook/wiki).
+Like the coursebook, we will constrain our discussion and definitions to be relevant primarily to linux, and to POSIX compliant operating systems unless otherwise specified.
 
 To kick things off let's take a look at the shell.
 Hopefully you've used some kind of shell before (`bash`, `zsh`, etc).

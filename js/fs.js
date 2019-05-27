@@ -1,5 +1,6 @@
 // requires fs_helper.js
 function DefaultFS(){};
+// TODO implement access, rename, chown
 DefaultFS.prototype.mount = not_implemented;
 DefaultFS.prototype.readdir = not_implemented;
 DefaultFS.prototype.stat = not_implemented;
