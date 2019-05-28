@@ -25,7 +25,7 @@ To get a list of functions that a filesystem must implement I like to look at th
 FUSE (which stands for Filesystems in USErspace) is a library that makes it easy to write filesystems without having to write kernel code.
 A filesystem implemented with FUSE must register itself by filling out the `fuse_operations` struct.
 We can find the documentation for this struct at this link: [https://libfuse.github.io/doxygen/structfuse__operations.html#abac8718cdfc1ee273a44831a27393419](https://libfuse.github.io/doxygen/structfuse__operations.html#abac8718cdfc1ee273a44831a27393419).
-Below is an excerpt from the documentation highlighting relevant fields of the struct.
+Below is an excerpt from the documentation highlighting a few relevant fields of the struct.
 
 ```
 int(* 	getattr )(const char *, struct stat *, struct fuse_file_info *fi)
@@ -83,6 +83,7 @@ If you're stuck check out these hints below:
 
 <pre id="myvfs_code">
 function MyVFS() {};
+// populates MyVFS with generic error functions for all callbacks
 inherit(MyVFS, DefaultFS);
 
 // implement a few other callbacks like readdir
@@ -105,9 +106,6 @@ MyVFS.prototype.write = function (fd, buffer) {
 <p id='status'></p>
 <br>
 
-<!-- TODO implement head -->
-<!-- TODO implement way to kill process -->
-<!-- TODO use hexdump/read and warn against using cat -->
 Try commands such as `echo hi > /dev/zero` and `hexdump -c 10 /dev/zero`
 (Shows the hex values of the first 10 bytes of the file - change 10 to something else to see a different number of bytes).
 
@@ -119,7 +117,7 @@ our shell simulator models an operating system that can have at most 2 running p
 <br>
 
 In our simiulator the filesystem acts similar to how a filesystem in the kernel would present itself (a series of functions that can be called from the kernel), which is different from the way FUSE works
-(a series of functions that can are run in the context of a running `filesystem` process via [IPC](https://github.com/illinois-cs241/coursebook/wiki/Ipc)).
+(a series of functions that can are run in the context of a running filesystem process via [IPC](https://github.com/illinois-cs241/coursebook/wiki/Ipc)).
 
 
 <script>
