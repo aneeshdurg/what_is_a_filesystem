@@ -17,9 +17,6 @@ function FSAnimator(fs, canvas, block_limit) {
 
     this.tasks = [];
 
-    this.duration = Number(localStorage.getItem("ANIMATOR_DURATION")) || 100;
-    console.log("Animation speed is set to", this.duration);
-
     this.registered_inodes = {};
     this.registered_blocks = {};
 
@@ -28,9 +25,24 @@ function FSAnimator(fs, canvas, block_limit) {
 
     this.register_inode(0);
 
-    var that = this;
-    setInterval(() => { that.draw() }, this.duration);
+    this.duration = null;
+    this.timer = null;
+    this.reload_duration();
 }
+
+// TODO implement IOCTL_SET_ANIMATION_DURATION
+FSAnimator.prototype.set_duration = function(duration) {
+    this.duration = duration;
+    console.log("Animation speed is set to", this.duration);
+
+    clearTimeout(this.timer);
+    var that = this;
+    this.timer = setInterval(() => { that.draw() }, this.duration);
+};
+
+FSAnimator.prototype.reload_duration = function(duration) {
+    this.set_duration(Number(localStorage.getItem("ANIMATOR_DURATION")) || 100);
+};
 
 FSAnimator.prototype.draw = function() {
     var currtask = null;
