@@ -360,7 +360,7 @@ MyFS.prototype.truncate = async function (path, length) {
 
     var inode = this._inodes[inodenum];
     if (length > inode.filesize) {
-        var file = await this.open(path, O_WRONLY);
+        var file = await this.open(path, O_WRONLY | O_APPEND);
         if (typeof(file) === 'string')
             return file;
 
@@ -368,6 +368,7 @@ MyFS.prototype.truncate = async function (path, length) {
 
         var zero_bytes = new Uint8Array(new ArrayBuffer(length - inode.filesize));
         zero_bytes.fill(0);
+        console.log("Adding", zero_bytes.length, "bytes");
         return this.write(file, zero_bytes);
     } else if (length < inode.filesize) {
         while ((length - inode.filesize) > this.block_size) {

@@ -56,10 +56,8 @@ Shell.prototype.handle_hexdump_or_read = async function(command) {
                 write_buffer = "";
                 for (var c = 0; c < bytes_read; c++) {
                     var hex_byte = buffer[c].toString(16).toUpperCase();
-                    // Uint8Array guarantees that hex_byte.length <= 2
-                    if (hex_byte.length == 1)
-                        hex_byte = "0" + hex_byte;
-                    write_buffer += hex_byte;
+                    // Add leading '0' if necessary
+                    write_buffer += hex_byte.padStart(2, '0');
                 }
 
                 write_buffer = str_to_bytes(write_buffer);

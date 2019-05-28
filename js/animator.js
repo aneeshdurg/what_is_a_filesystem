@@ -144,9 +144,10 @@ FSAnimator.prototype.select_inode = function (inodenum, inode){
   console.log("Selected " + (new Error()).stack);
   this.ctx.translate(0, this.ctx.canvas.height / 2);
   this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
+  this.ctx.beginPath();
   this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
   this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
-  this.ctx.fileeStyle = this.registered_inodes[inodenum];
+  this.ctx.fillStyle = this.registered_inodes[inodenum];
   this.ctx.fill();
   this.ctx.stroke();
 
@@ -154,8 +155,10 @@ FSAnimator.prototype.select_inode = function (inodenum, inode){
   var h_offset = 25;
 
   var font_size = 20;
-  this.ctx.font = font_size + "px Arial";
+  this.ctx.font = font_size + "px Courier New";
 
+  this.ctx.beginPath();
+  this.ctx.fillStyle = "black";
   this.ctx.fillText("Inode: " + inodenum, w_offset, h_offset);
   h_offset += 20;
 
