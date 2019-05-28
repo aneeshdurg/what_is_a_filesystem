@@ -111,6 +111,7 @@ __gen_LayeredFilesystem_callback_2_file("write");
 __gen_LayeredFilesystem_callback_2_resolve_1("chmod");
 __gen_LayeredFilesystem_callback_2_resolve_1("create");
 __gen_LayeredFilesystem_callback_2_resolve_1("mkdir");
+__gen_LayeredFilesystem_callback_2_resolve_1("truncate");
 
 __gen_LayeredFilesystem_callback_2_resolve_2("link");
 

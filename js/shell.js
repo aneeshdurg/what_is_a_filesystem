@@ -13,6 +13,7 @@ const possible_commands = [
         "rm",
         "stat",
         "touch",
+        "trunc",
         "inodeinfo",
     ]
 

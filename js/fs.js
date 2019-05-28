@@ -7,6 +7,7 @@ DefaultFS.prototype.readdir = not_implemented;
 DefaultFS.prototype.stat = not_implemented;
 DefaultFS.prototype.unlink = not_implemented;
 DefaultFS.prototype.create = not_implemented;
+DefaultFS.prototype.truncate = not_implemented;
 DefaultFS.prototype.open = not_implemented;
 DefaultFS.prototype.close = not_implemented;
 DefaultFS.prototype.chmod = not_implemented;
@@ -276,6 +277,17 @@ MyFS.prototype.release_block = async function (block) {
         await this.animations.deregister_block(block);
 };
 
+MyFS.prototype.append_block_to_inode = async function(inode) {
+    var curr_block = Math.floor(inode.filesize / this.block_size);
+    if ((inode.filesize % this.block_size) == 0)
+        curr_block++;
+    var new_blocks = await this.ensure_min_blockcount(inode, curr_block);
+    if (typeof(new_blocks) === 'string')
+        return new_blocks;
+
+    return new_blocks[0];
+}
+
 MyFS.prototype.create = async function (filename, mode, inode) {
     if (typeof(await this.inode_of(filename)) != 'string')
         return "EEXISTS";
@@ -318,37 +330,9 @@ MyFS.prototype.create = async function (filename, mode, inode) {
 
     // time to append to the directory
     // We'll take advantage of the fact that dirent_size == block_size
-    var new_block = this.get_new_block();
+    var new_block = await this.append_block_to_inode(parent_inode);
     if (typeof(new_block) === 'string')
         return new_block;
-
-    // we know that curr_block isn't on the inode by our assumption
-    var curr_block = Math.floor(parent_inode.filesize / this.block_size);
-    if (curr_block < parent_inode.num_direct) {
-        parent_inode.direct[curr_block] = new_block;
-    } else {
-        curr_block -= parent_inode.num_direct;
-        if (!curr_block) {
-            var indirect_block = this.get_new_block();
-            if (typeof(indrect_block) === 'string') {
-                await this.release_block(new_block);
-                return indirect_block;
-            }
-            if (this.animations)
-                await this.animations.register_block_to_inode(parent_inodenum, indirect_block);
-
-            parent_inode.indirect[0] = indirect_block;
-        }
-
-        if (this.animations)
-            await this.animations.read_block(parent_inode.indirect[0]);
-
-        var disk_offset = parent_inode.indirect[0] * this.block_size + curr_block;
-        var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
-        curr_entry[0] = new_block;
-    }
-    if (this.animations)
-        await this.animations.register_block_to_inode(parent_inodenum, new_block);
 
     var disk_offset = new_block * this.block_size;
 
@@ -367,6 +351,37 @@ MyFS.prototype.create = async function (filename, mode, inode) {
     this._inodes[found_inode].num_links += 1;
     this._inodes[found_inode].permissions = mode;
     return found_inode;
+};
+
+MyFS.prototype.truncate = async function (path, length) {
+    var inodenum = await this.inode_of(path);
+    if (typeof(inodenum) == 'string')
+        return inodenum;
+
+    var inode = this._inodes[inodenum];
+    if (length > inode.filesize) {
+        var file = await this.open(path, O_WRONLY);
+        if (typeof(file) === 'string')
+            return file;
+
+        console.log("got file");
+
+        var zero_bytes = new Uint8Array(new ArrayBuffer(length - inode.filesize));
+        zero_bytes.fill(0);
+        return this.write(file, zero_bytes);
+    } else if (length < inode.filesize) {
+        while ((length - inode.filesize) > this.block_size) {
+            var num_blocks = Math.floor(inode.filesize / this.dirent_size);
+            var lastblock_num = await this.get_nth_blocknum_from_inode(inode, num_blocks - 1);
+            await this.release_block(lastblock_num);
+            if ((num_blocks - 1) == inode.num_direct)
+                await this.release_block(inode.indirect[0]);
+            inode.filesize -= this.block_size;
+        }
+        inode.filesize = length;
+    }
+
+    return 0;
 };
 
 MyFS.prototype.empty_inode = async function (inodenum) {
@@ -456,9 +471,10 @@ MyFS.prototype.ensure_min_blockcount = async function (inode, blockcount) {
 
     var currblocks = Math.ceil(inode.filesize / this.block_size);
 
+    var added_blocks = [];
     var blocks_to_add = blockcount - currblocks;
     if (blocks_to_add <= 0)
-        return 0;
+        return added_blocks;
 
     var needs_indirect = false;
     var total_disk_blocks_needed = blocks_to_add;
@@ -475,9 +491,11 @@ MyFS.prototype.ensure_min_blockcount = async function (inode, blockcount) {
     var initialized_indirect = (currblocks > inode.num_direct);
     while (blocks_to_add) {
         if (currblocks < inode.num_direct) {
-            inode.direct[currblocks] = this.get_new_block();
+            var new_block = this.get_new_block();
+            inode.direct[currblocks] = new_block;
+            added_blocks.push(new_block);
             if (this.animations)
-                await this.animations.register_block_to_inode(inodenum, inode.direct[currblocks]);
+                await this.animations.register_block_to_inode(inodenum, new_block);
 
         } else {
             if (!initialized_indirect) {
@@ -494,6 +512,7 @@ MyFS.prototype.ensure_min_blockcount = async function (inode, blockcount) {
                 await this.animations.read_block(inode.indirect[0]);
 
             curr_entry[0] = this.get_new_block();
+            added_blocks.push(curr_entry[0]);
             if (this.animations)
                 await this.animations.register_block_to_inode(inodenum, curr_entry[0]);
         }
@@ -502,7 +521,7 @@ MyFS.prototype.ensure_min_blockcount = async function (inode, blockcount) {
         blocks_to_add--;
     }
 
-    return 0;
+    return added_blocks;
 };
 
 MyFS.prototype.read_or_write = async function (filedes, buffer, is_read) {
