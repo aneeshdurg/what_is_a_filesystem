@@ -3,10 +3,12 @@ const possible_commands = [
         "cd",
         "echo",
         "file",
+        "hexdump",
         "link",
         "ls",
         "mkdir",
         "mount",
+        "read",
         "replace", // replace str1 str2 (replaces str1 in stdin with str2 in stdout)
         "rm",
         "stat",
