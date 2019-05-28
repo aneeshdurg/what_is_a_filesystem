@@ -4,6 +4,7 @@ title:  "Introduction"
 ---
 
 <script>
+var animated_shell;
 window.onload = function() {
     var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell_parent"));
     shell.main();
@@ -11,7 +12,7 @@ window.onload = function() {
 
     var canvas = create_canvas('fs_vis');
     var animated_fs = new LayeredFilesystem(null, canvas);
-    var animated_shell = new Shell(animated_fs, document.getElementById("shell_fs_parent"));
+    animated_shell = new Shell(animated_fs, document.getElementById("shell_fs_parent"));
     animated_shell.main();
     console.log("set up animated shell");
 };
@@ -51,5 +52,29 @@ Try running some commands in the shell below and see how/if they interact with t
 <div id="shell_fs_parent"></div>
 <br>
 <canvas id="fs_vis"></canvas>
+
+You can change the speed of the animations here:
+
+<select id="speed_selector">
+<option value="">default</option>
+</select>
+<button onclick='change_speed()'>Change Speed!</button>
+
+<script>
+for (var i = 10; i <= 100; i++) {
+    var opt = document.createElement('option');
+    opt.value = i.toString();
+    opt.innerText = i + "ms";
+    document.getElementById('speed_selector').appendChild(opt);
+}
+function change_speed() {
+    var speed_value = document.getElementById('speed_selector').value || "100";
+    localStorage.setItem("ANIMATOR_DURATION", speed_value);
+    alert("Changed animation speed to "+ speed_value + "ms");
+}
+</script>
+
+Note that for the change to take place you must reload the page.
+Changing the speed here will change the speed of all animations on this website.
 
 When you're done playing with the shell above, click `Next Chapter` or press the right arrow key to advance to the next page!

@@ -17,7 +17,8 @@ function FSAnimator(fs, canvas, block_limit) {
 
     this.tasks = [];
 
-    this.duration = 100;
+    this.duration = Number(localStorage.getItem("ANIMATOR_DURATION")) || 100;
+    console.log("Animation speed is set to", this.duration);
 
     this.registered_inodes = {};
     this.registered_blocks = {};
