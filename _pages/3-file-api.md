@@ -68,14 +68,19 @@ Once you've written your code, press `run` below to `mount` your file system at 
 If you're stuck check out these hints below:
 
 <details><summary> Click to expand/hide hints</summary>
-<div markdown="1">
-+ when someone tries to write to the file we'll return the size of the buffer (try the `.length` property) to indicate that we successfully _consumed_ the data.
-+ when someone tries to read to the file we'll zero out the contents of the buffer (try the `.fill` method).
-
-<details> <summary> Still stuck? Click here to show the solution. </summary>
-<pre id="myvfs_soln"> </pre>
-</details>
-</div>
+  <div markdown="1">
+  + When someone tries to write to the file we'll return the size of the buffer (try the `.length` property) to indicate that we successfully _consumed_ the data,
+  but we won't actually do anything with the data itself.
+  + When someone tries to read to the file we'll zero out the contents of the buffer (try the `.fill` method).
+  + Need to debug with print statements? Try `console.log("hello world!")`. Right click the page,
+    click on the `console` tab and you'll be able to see the output of `console.log` when you run the code and interact with the filesystem via the shell.
+  
+    <div style="margin-left: 5%;">
+      <details> <summary> Still stuck? Click here to show the solution. </summary>
+        <pre id="myvfs_soln"> </pre>
+      </details>
+    </div>
+  </div>
 </details>
 
 {% assign read_placeholder = "MYVFS_READ" %}
