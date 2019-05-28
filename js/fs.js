@@ -2,6 +2,7 @@
 function DefaultFS(){};
 // TODO implement access, rename, chown
 DefaultFS.prototype.mount = not_implemented;
+DefaultFS.prototype.umount = not_implemented;
 DefaultFS.prototype.readdir = not_implemented;
 DefaultFS.prototype.stat = not_implemented;
 DefaultFS.prototype.unlink = not_implemented;

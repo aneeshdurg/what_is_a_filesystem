@@ -47,6 +47,14 @@ LayeredFilesystem.prototype.mount = async function(dir, fs) {
     return 0;
 }
 
+LayeredFilesystem.prototype.umount = async function(dir) {
+    if (!this.mountpoints[dir])
+        return "EINVAL";
+
+    this.mountpoints[dir] = null;
+    return 0;
+}
+
 function __gen_LayeredFilesystem_callback_1(name) {
     eval("LayeredFilesystem.prototype." + name + "= async function (path) {" +
         "  var resolved = this.resolve_fs_and_path(path);" +
