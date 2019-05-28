@@ -2,20 +2,20 @@ const possible_commands = [
         "cat",
         "cd",
         "echo",
-        "file",
+        //"file", TODO implement file
         "hexdump",
+        "inodeinfo",
         "link",
         "ls",
         "mkdir",
-        "mount",
+        //"mount", TODO implement mount
         "read",
-        "replace", // replace str1 str2 (replaces str1 in stdin with str2 in stdout)
+        "replace",
         "rm",
         "stat",
         "touch",
         "trunc",
-        "inodeinfo",
-    ]
+    ];
 
 // command syntax: [args] (> file(+offset))
 function Command(input, stdout_path) {
