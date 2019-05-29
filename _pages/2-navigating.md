@@ -3,13 +3,16 @@ layout: post
 title:  "Navigating the File Tree"
 ---
 <script>
-window.onload = function() {
+window.onload = async function() {
     var fs = new MyFS();
 
     var shell_containers = document.querySelectorAll('[id^="shell_"]');
+    var prev_shell_init = null;
     for (shell_el of shell_containers) {
+        await prev_shell_init;
         var shell = new Shell(new LayeredFilesystem(fs), shell_el);
         shell.main();
+        prev_shell_init = shell.initialized;
     }
 };
 </script>
