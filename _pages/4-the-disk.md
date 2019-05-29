@@ -71,6 +71,8 @@ draw_file(ctx, 30, 5, 'red');
 </script>
 
 If the user then wants to append 5B to the first (blue) file again, we need to create a way to keep track of regions of memory owned by the file.
+This is to avoid requiring a continguous region on disk which will either be expensive as we'll have to move entire files around periodidcally or impossible
+when we have many programs operating on many files at once.
 Suppose we had such a mechanism, we can then satisfy the request to get:
 <canvas id="no_disk_blocks_3"></canvas>
 <script>

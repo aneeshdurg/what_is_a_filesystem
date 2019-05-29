@@ -15,8 +15,10 @@ At a minimum we need to know two things:
 + the size of the file
 
 While the first attribute may be obvious, the second is equally important as it lets us know if we should only read a portion of a block.
+To keep things simple and efficient, we'll enforce that a block must be completely full of the user's data before a file can request another block.
+Note that some filesystems don't impose such constraints and instead implement a _sparse file_, although we won't discuss them here.
 
-To satisfy these requirements, we define a struct that we call an `inode`.
+To satisfy our requirements, we define a struct that we call an `inode`.
 The etymology of `inode` is somewhat murky, with a popular belief that the name is a contraction of `index` and `node` [(at least, that's what wikipedia says)](https://en.wikipedia.org/wiki/Inode).
 
 For the sake of simplicity and efficient access, some filesystems have a fixed set of inodes, or inode-esque structures.
@@ -70,6 +72,10 @@ var setup_2 = (async function() {
     await fs_2.ioctl(file, IOCTL_SELECT_INODE);
 })();
 </script>
+
+When reading from this non-contiguous file, the `read` command will give us access to a stream of data and
+will create the illusion that the file is one continous entity by seamlessly (ignoring disk performance) concatenating the data from one block with the data from the next block.
+We'll provide a in-depth example of how reads/writes work in the next section.
 
 Let's take a closer look at how we're keeping track of block indicies in the inode.
 From the diagram above you can see that every inode occupies a fixed amount of space.
