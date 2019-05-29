@@ -120,7 +120,6 @@ function Shell(fs, parent) {
 }
 
 Shell.prototype.setup_container_and_output = function(parent) {
-    var that = this;
     this.container = document.createElement("div");
     this.container.tabIndex = "0";
     this.container.style.maxHeight = "250px";
@@ -129,24 +128,45 @@ Shell.prototype.setup_container_and_output = function(parent) {
     //this.container.style.overflow = "scroll";
 
     this.output = document.createElement("pre");
-    this.container.addEventListener("click", function(e) { that.container.focus(); }, false);
-    function stop_event(e) {
-        e.stopPropagation();
-        e.preventDefault();
-    }
-
-    this.container.addEventListener("keyup", stop_event);
-    this.container.addEventListener("keydown", function(e) {
-        if(that.process_input(e.key, e.ctrlKey))
-            stop_event(e);
-    }, false);
+    this.setup_container_event_listeners();
     this.container.appendChild(this.output);
 
     if (parent) {
         parent.appendChild(this.container);
     }
 
+    var that = this;
+    this.initialized = new Promise(r => { that._init_resolver = r; });
 }
+
+Shell.prototype.setup_container_event_listeners = function () {
+    function stop_event(e) {
+        e.stopPropagation();
+        e.preventDefault();
+    }
+    var that = this;
+
+    this.click_listner = function(e) { that.container.focus(); };
+    this.container.addEventListener("click", this.click_listner, false);
+
+    this.container.addEventListener("keyup", stop_event);
+
+    this.keydown_listener = function(e) {
+        if(that.process_input(e.key, e.ctrlKey))
+            stop_event(e);
+    };
+    this.container.addEventListener("keydown", this.keydown_listener, false);
+}
+Shell.prototype.remove_container_event_listeners = function () {
+    if (this.click_listner)
+        this.container.removeEventListener("click", this.click_listner, false);
+
+    if (this.keyup_listener)
+        this.container.removeEventListener("keyup", this.keyup_listener);
+
+    if (this.keydown_listener)
+        this.container.removeEventListener("keydown", this.keydown_listener, false);
+};
 
 Shell.prototype._init = async function () {
     this.shellfs_root = "/.shellfs";
@@ -178,6 +198,8 @@ Shell.prototype._init = async function () {
     for (p of coreutils_promises) {
         await p;
     }
+
+    this._init_resolver();
 }
 
 Shell.prototype.process_input = function (key, ctrlkey) {
@@ -286,6 +308,9 @@ Shell.prototype.main = async function () {
 Shell.prototype.run_command = async function (input) {
     var command = new Command(input, this.output_path);
 
+    if (!command.arguments[0])
+        return;
+
     var command_output = this.expand_path(command.output)
     var open_flags = O_WRONLY | O_CREAT;
     if (command.append_output)
@@ -299,7 +324,6 @@ Shell.prototype.run_command = async function (input) {
         if (command.arguments[0] == possible_commands[i])
             return this['handle_' + possible_commands[i]](command);
     }
-
     var path = this.expand_path(command.arguments[0]);
     var file = await this.filesystem.open(path, O_RDONLY);
     if (typeof(file) === 'string')
