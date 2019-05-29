@@ -89,14 +89,21 @@ MyFS.prototype.readdir = async function (path) {
     var i = 0;
     var dir_contents = null;
     var inode = null;
+    var inodenum = -1;
+    var parent_inodenum = -1;
     while (i < path_arr.length) {
         if (dir_contents == null) {
-            inode = this._inodes[0];
+            inodenum = 0;
+            parent_inodenum = 0;
+            inode = this._inodes[inodenum];
         } else {
             inode = null;
-            for (var j = 0; j < dir_contents.length; j++) {
+            // skip '.' and '..'
+            for (var j = 2; j < dir_contents.length; j++) {
                 if (dir_contents[j].filename == path_arr[i]) {
-                    inode = this._inodes[dir_contents[j].inodenum];
+                    parent_inodenum = inodenum;
+                    inodenum = dir_contents[j].inodenum;
+                    inode = this._inodes[inodenum];
                     break;
                 }
             }
@@ -108,7 +115,10 @@ MyFS.prototype.readdir = async function (path) {
             }
         }
 
-        dir_contents = [];
+        dir_contents = [
+            new Dirent(inodenum, '.'),
+            new Dirent(parent_inodenum, '..'),
+        ];
         var bytes_read = 0;
         while (bytes_read < inode.filesize) {
             var curr_block = Math.floor(bytes_read / this.block_size);

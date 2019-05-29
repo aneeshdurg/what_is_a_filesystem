@@ -51,17 +51,11 @@ Shell.prototype.handle_ls = async function(command) {
     if (typeof(curr_dir) === 'string')
         return this._return_error("Could not read dir '.' (" + curr_dir + ")");
 
-    var curr_dirent = new Dirent(curr_dir.inodenum, ".");
-
-    var parent_path = this.expand_path(this.path_join(path, "/.."));
-    var parent_dir = await this.filesystem.stat(parent_path);
-    if (typeof(parent_dir) === 'string')
-        return this._return_error("Could not read dir '.' (" + parent_dir + ")");
-
-    var parent_dirent = new Dirent(parent_dir.inodenum, "..");
-
-    if (!show_hidden)
-        contents = contents.filter(x => !x.filename.startsWith('.'));
+    if (!show_hidden) {
+        contents = contents.filter((x) => {
+            return x.filename === '.' || x.filename === '..' || !x.filename.startsWith('.')
+        });
+    }
 
     var that = this;
     async function default_line_formatter(x, _info) {
@@ -101,8 +95,6 @@ Shell.prototype.handle_ls = async function(command) {
         line_formatter = detailed_inode_line_formatter;
 
     var output = "";
-    output += await line_formatter(curr_dirent, curr_dir) + "\n";
-    output += await line_formatter(parent_dirent, parent_dir) + "\n";
     for (var i = 0; i < contents.length; i++) {
         output += await line_formatter(contents[i]) + "\n";
     }

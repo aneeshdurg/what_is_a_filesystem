@@ -18,6 +18,11 @@ Shell.prototype.handle_rm = async function(command) {
       error = await this.filesystem.unlink(path);
     } else if (recurse) {
       var dir_contents = await this.filesystem.readdir(path);
+      if (typeof(dir_contents) === 'string')
+        return this._return_error(dir_contents);
+      // Remove the '.' and '..' entries
+      dir_contents = dir_contents.slice(2);
+
       var that = this;
       var filenames = dir_contents.map(x => that.path_join(path, x.filename));
 
