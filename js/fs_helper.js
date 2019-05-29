@@ -7,6 +7,7 @@ function inherit(A, B) {
     });
 }
 
+const O_ACCESS = 0;
 const O_APPEND = 1;
 const O_CREAT = 2;
 const O_TRUNC = 4;
@@ -30,14 +31,26 @@ function FileDescriptor(fs, path, inodenum, inode, mode) {
     this.offset = 0;
 }
 
-function Stat(path, inodenum, mode, is_directory, filesize) {
-    this.path = path;
-    this.inodenum = inodenum;
-    this.mode = mode;
-    this.is_directory = is_directory;
-    this.filesize = filesize;
-    // TODO add atim, ctim, mtim, owner, group
+const _stat_params = [
+    "path",
+    "inodenum",
+    "mode",
+    "is_directory",
+    "filesize",
+    "atim",
+    "mtim",
+    "ctim",
+];
+function _gen_stat() {
+    var stat_src = "(function (" + _stat_params.join(",") + ") {";
+    for (param of _stat_params)  {
+        // this.param = param;
+        stat_src += "this." + param + " = " + param + ";";
+    }
+    stat_src += "});"
+    return eval(stat_src);
 }
+const Stat = _gen_stat();
 
 function Dirent(inodenum, filename) {
     this.inodenum = inodenum;

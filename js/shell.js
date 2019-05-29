@@ -66,7 +66,6 @@ ShellFS.prototype.ioctl = async function (fd, request, obj){
     return 0;
 };
 
-// TODO implement EOF on stdin
 ShellFS.prototype.read = async function (file, buffer){
     // read from stdin, using this.shell.reader to block if necessary
     var bytes_to_read = buffer.length;

@@ -57,8 +57,23 @@ function MyFS(canvas) {
         this.permissions = 0;
         this.is_directory = false;
         this.num_links = 0;
+
+        this.atim = 0;
+        this.mtim = 0;
+        this.ctim = 0;
         // TODO implement sticky bits and user/group model
     }
+
+    Inode.prototype.update_atim = function () {
+        this.atim = Date.now();
+    }
+    Inode.prototype.update_mtim = function () {
+        this.mtim = Date.now();
+    }
+    Inode.prototype.update_ctim = function () {
+        this.ctim = Date.now();
+    }
+
     // In reality the inodes should be part of the disk, but that's too much work to implement
     this._inodes = new Array(this.num_inodes);
     for (var i = 0; i < this.num_inodes; i++) {
@@ -115,6 +130,8 @@ MyFS.prototype.readdir = async function (path) {
             }
         }
 
+        inode.update_atim();
+
         dir_contents = [
             new Dirent(inodenum, '.'),
             new Dirent(parent_inodenum, '..'),
@@ -162,7 +179,16 @@ MyFS.prototype.stat = async function(file) {
     if (typeof(inodenum) === 'string')
         return inodenum;
     var inode = this._inodes[inodenum];
-    var info = new Stat(file, inodenum, inode.permissions, inode.is_directory, inode.filesize);
+    inode.update_atim();
+    var info = new Stat(
+        file,
+        inodenum,
+        inode.permissions,
+        inode.is_directory,
+        inode.filesize,
+        inode.atim,
+        inode.mtim,
+        inode.ctim);
     return info;
 };
 
@@ -194,6 +220,9 @@ MyFS.prototype.unlink = async function(path) {
 
     inode = this._inodes[inodenum];
 
+    inode.update_atim();
+    inode.update_mtim();
+
     inode.num_links--;
     if (inode.num_links == 0) {
         await this.empty_inode(inodenum);
@@ -204,6 +233,9 @@ MyFS.prototype.unlink = async function(path) {
     var split_filename = split_parent_of(path);
     var parent_inodenum = await this.inode_of(split_filename[0]);
     var parent_inode = this._inodes[parent_inodenum];
+
+    parent_inode.update_atim();
+    parent_inode.update_mtim();
 
     // Find block number of dirent to be removed
     // This loop is gauranteed to find the inode since the case where the file
@@ -356,10 +388,17 @@ MyFS.prototype.create = async function (filename, mode, inode) {
         dirent_filename[i] = 0;
 
     parent_inode.filesize += this.dirent_size;
+    parent_inode.update_atim();
+    parent_inode.update_mtim();
 
     // Mark inode as used
-    this._inodes[found_inode].num_links += 1;
-    this._inodes[found_inode].permissions = mode;
+    var inode = this._inodes[found_inode];
+    inode.update_atim();
+    inode.update_mtim();
+    inode.update_ctim();
+
+    inode.num_links += 1;
+    inode.permissions = mode;
     return found_inode;
 };
 
@@ -390,6 +429,8 @@ MyFS.prototype.truncate = async function (path, length) {
             inode.filesize -= this.block_size;
         }
         inode.filesize = length;
+        inode.update_atim();
+        inode.update_mtim();
     }
 
     return 0;
@@ -430,17 +471,19 @@ MyFS.prototype.open = async function (filename, flags, mode) {
             return inodenum;
     }
 
+    var inode = this._inodes[inodenum];
+    inode.update_atim();
     // TODO check permissions (might not do this)
     if ((flags & O_TRUNC) && (flags & O_WRONLY)) {
         await this.empty_inode(inodenum);
-        this._inodes[inodenum].filesize = 0;
+        inode.filesize = 0;
     }
 
     if (flags & O_APPEND)
         flags |= O_WRONLY;
 
     var filedes = new FileDescriptor(
-        this, filename, inodenum, this._inodes[inodenum], flags & O_RDWR);
+        this, filename, inodenum, inode, flags & O_RDWR);
     if (flags & O_APPEND)
         filedes.offset = filedes.inode.filesize;
 
@@ -453,7 +496,11 @@ MyFS.prototype.chmod = async function(path, permissions) {
     var inodenum = await this.inode_of(path);
     if (typeof(inodenum) == 'string')
         return inodenum;
-    this._inodes[inodenum].permissions = permissions;
+    var inode = this._inodes[inodenum];
+    inode.permissions = permissions;
+    inode.update_atim();
+    inode.update_mtim();
+    inode.update_ctim();
 
     return 0;
 };
@@ -464,6 +511,8 @@ MyFS.prototype.link = async function(path1, path2) {
     if (typeof(inodenum) == 'string')
         return inodenum;
 
+    var inode = this._inodes[inodenum];
+    // atim/mtim/ctim managed  by create
     return this.create(path2, this._inodes[inodenum].permissions, inodenum);
 };
 
@@ -608,6 +657,10 @@ MyFS.prototype.read_or_write = async function (filedes, buffer, is_read) {
     if (!is_read)
         filedes.inode.filesize = final_filesize;
 
+    filedes.inode.update_atim();
+    if (!is_read)
+        filedes.inode.update_mtim();
+
     return bytes_written;
 };
 
@@ -620,6 +673,7 @@ MyFS.prototype.read = async function (filedes, buffer) {
 };
 
 MyFS.prototype.ioctl = async function (filedes, request, obj) {
+    filedes.inode.update_atim();
     if (request != IOCTL_SELECT_INODE)
         return "EIMPL";
 

@@ -7,7 +7,6 @@ Shell.prototype.handle_hexdump = async function(command) {
 Shell.prototype.handle_hexdump_or_read = async function(command) {
     var _bytes_to_read = -1;
     if (command.arguments.length >= 3 && command.arguments[1] == '-c') {
-        // TODO implement fixed byte read.
         var prog_name = command.arguments.shift();
         command.arguments.shift();
         _bytes_to_read = Number(command.arguments.shift()) || 0;
