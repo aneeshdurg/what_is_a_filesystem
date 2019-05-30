@@ -1,6 +1,8 @@
 <script src="/js/test.js"></script>
+<script src="/js/defs.js"></script>
 <script src="/js/fs_helper.js"></script>
 <script src="/js/fs.js"></script>
+<script src="/js/myfs.js"></script>
 <script src="/js/lfs.js"></script>
 <script>
 
@@ -11,28 +13,28 @@ async function test_layered_fns() {
     await lfs.mount("/tmp", tmp);
 
     await lfs.create("/asdf", 0o777);
-    assert((await lfs.readdir("/")).length == 2);
+    assert((await lfs.readdir("/")).length == 4);
     console.log(await lfs.readdir("/tmp"));
-    assert((await lfs.readdir("/tmp")).length == 0);
+    assert((await lfs.readdir("/tmp")).length == 2);
 
     await lfs.create("/tmp/asdf", 0o777);
-    assert((await lfs.readdir("/tmp")).length == 1);
+    assert((await lfs.readdir("/tmp")).length == 3);
 	console.log((await tmp.readdir("/")));
-    assert((await tmp.readdir("/")).length == 1);
+    assert((await tmp.readdir("/")).length == 3);
 	return lfs;
 }
 
 async function test_readdir() {
     var fs = new MyFS();
-    assert((await fs.readdir("/")).length == 0);
+    assert((await fs.readdir("/")).length == 2);
     await fs.open("/asdf", O_CREAT, 0o777);
-    assert((await fs.readdir("/")).length == 1);
+    assert((await fs.readdir("/")).length == 3);
     return fs;
 }
 
 async function test_write(){
     fs = new MyFS();
-    console.log((await fs.readdir("/")).length == 0);
+    console.log((await fs.readdir("/")).length == 2);
     await fs.open("/asdf", O_CREAT, 0o777);
     file = await fs.open("/asdf", O_WRONLY);
     console.log(file);
@@ -58,7 +60,7 @@ async function test_write(){
 
 async function test_write_max(){
     fs = new MyFS();
-    console.log(await fs.readdir("/").length == 0);
+    console.log(await fs.readdir("/").length == 2);
     await fs.open("/asdf", O_CREAT, 0o777);
     file = await fs.open("/asdf", O_WRONLY);
     console.log(file);
@@ -95,8 +97,8 @@ async function test_link() {
     fs = new MyFS();
     var file1 = await fs.open("/newfile", O_CREAT, 0o777);
     var inode2 = await fs.link("/newfile", "/newfile1");
-    assert((await fs.readdir("/")).length == 2);
-    assert(file1.inode == fs.inodes[inode2]);
+    assert((await fs.readdir("/")).length == 4);
+    assert(file1.inode == fs._inodes[inode2]);
     assert(typeof(i1) !== 'string');
     return fs;
 }
@@ -106,11 +108,11 @@ async function test_unlink() {
     fs = await test_link();
     await fs.unlink("/newfile");
     dirs = await fs.readdir("/");
-    assert(dirs.length == 1);
-    assert(dirs[0].filename == "newfile1");
+    assert(dirs.length == 3);
+    assert(dirs[2].filename == "newfile1");
     await fs.unlink("/newfile1");
     dirs = await fs.readdir("/");
-    assert(dirs.length == 0);
+    assert(dirs.length == 2);
     return fs;
 }
 </script>
