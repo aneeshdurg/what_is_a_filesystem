@@ -102,22 +102,14 @@ MyFS.prototype.readdir = async function (path) {
             new Dirent(parent_inodenum, '..'),
         ];
         var bytes_read = 0;
-        while (bytes_read < inode.filesize) {
-            var curr_block = Math.floor(bytes_read / this.block_size);
-            var offset = bytes_read % this.block_size;
+        var filedes = new FileDescriptor(
+            this, "", inodenum, inode, O_RDONLY | O_DIRECTORY);
 
-            var dirent = null;
-            var block_num = await this.get_nth_blocknum_from_inode(inode, curr_block);
-            var disk_offset = block_num * this.block_size;
-            var inodenum = new Uint8Array(this.disk, disk_offset, 1);
-            var filename = new Uint8Array(this.disk, disk_offset + 1, this.dirent_size - 1);
+        var buffer = new Uint8Array(new ArrayBuffer(this.block_size));
+        while ((bytes_read = await this.read(filedes, buffer))) {
+            var filename = new Uint8Array(buffer.buffer, 1, this.dirent_size - 1);
             filename = bytes_to_str(filename).split("\u0000")[0];
-            dir_contents.push(new Dirent(inodenum[0],  filename));
-            if (this.animations)
-                await this.animations.read_block(block_num);
-
-
-            bytes_read += this.block_size;
+            dir_contents.push(new Dirent(buffer[0],  filename));
         }
         i++;
     }
@@ -335,35 +327,21 @@ MyFS.prototype.create = async function (filename, mode, inode) {
         found_inode = inode;
     }
 
-    // time to append to the directory
-    // We'll take advantage of the fact that dirent_size == block_size
-    var new_block = await this.append_block_to_inode(parent_inode);
-    if (typeof(new_block) === 'string')
-        return new_block;
+    // time to append to the directory using write
+    // TODO wrap around this with a function open_inode()
+    var filedes = new FileDescriptor(
+        this, "", parent_inodenum, parent_inode, O_WRONLY | O_APPEND | O_DIRECTORY);
+    filedes.offset = filedes.inode.filesize;
 
-    var disk_offset = new_block * this.block_size;
+    var dirent_str = "\u0000"; // space for the inodenum
+    dirent_str += split_filename[1]; // filename
+    dirent_str = dirent_str.padEnd(this.dirent_size, "\u0000"); // Add any necessary padding to meet the desired size.
+    var dirent = str_to_bytes(dirent_str);
+    var error = await this.write(filedes, dirent);
 
-    var dirent_inodenum = new Uint8Array(this.disk, disk_offset, 1);
-    dirent_inodenum[0] = found_inode;
+    if (typeof(error) == 'string')
+        return error;
 
-    var dirent_filename = new Uint8Array(this.disk, disk_offset + 1, this.dirent_size - 1);
-    for(var i = 0; i < split_filename[1].length; i++)
-        dirent_filename[i] = split_filename[1].charCodeAt(i);
-    for(var i = split_filename[1].length; i < (this.dirent_size - 1); i++)
-        dirent_filename[i] = 0;
-
-    parent_inode.filesize += this.dirent_size;
-    parent_inode.update_atim();
-    parent_inode.update_mtim();
-
-    // Mark inode as used
-    var inode = this._inodes[found_inode];
-    inode.update_atim();
-    inode.update_mtim();
-    inode.update_ctim();
-
-    inode.num_links += 1;
-    inode.permissions = mode;
     return found_inode;
 };
 

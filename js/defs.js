@@ -5,6 +5,7 @@ const O_TRUNC = 4;
 const O_RDONLY = 8;
 const O_WRONLY = 16;
 const O_RDWR = O_RDONLY | O_WRONLY;
+const O_DIRECTORY = 32;
 
 const SEEK_SET = 0;
 const SEEK_END = 1;

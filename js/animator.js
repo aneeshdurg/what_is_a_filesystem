@@ -37,7 +37,8 @@ FSAnimator.prototype.set_duration = function(duration) {
 
     clearTimeout(this.timer);
     var that = this;
-    this.timer = setInterval(() => { that.draw() }, this.duration);
+    if (this.duration > 0)
+      this.timer = setInterval(() => { that.draw() }, this.duration);
 };
 
 FSAnimator.prototype.reload_duration = function(duration) {
