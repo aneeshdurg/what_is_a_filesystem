@@ -73,15 +73,4 @@ async function step_5b_read() {
 }
 </script>
 
-Note how read returns us 5 bytes as if this weird structure of storing data in blocks could have been replaced by one continous storage mechanism?
-This is the motivation behind defining a filesystem as a series of callbacks - we can use familiar interfaces that are agnostic of the actual mechanism that stores the data.
 
-By convention, read will return 0 when it know that we've read past the end of the file. But how does read keep track of how many bytes it's read?
-Enter the offset.
-Back in the [third section](/pages/03-file-api.html) we saw that in FUSE, read and write take an offset that they must update to indicate how many bytes of the file they have operated.
-The filesystem callbacks for read and write can use this offset parameter to control what data they should return.
-(e.g. in our reading example above, at the end of each read, we should increment the offset by 5, so the next read will give us data we haven't read before)
-
-The key difference between reading and writing are the number of ways a write can fail.
-Writes can fail when we run out of disk space, or when we attempt to increase the filesize beyond what the filesystem supports, or if we try writing to a file we don't have write permissions to.
-This makes writing a slightly more complex operation, but the underlying principles are the same as reading.
