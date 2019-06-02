@@ -5,7 +5,7 @@ title:  "Inodes and File Metadata"
 
 <blockquote><div markdown="1">
 In this section we'll be interacting with the filesystem visualizer.
-If you'd like to slow down or speed up the visualizations, please see the [first post](/pages/1-intro.html).
+If you'd like to slow down or speed up the visualizations, please see the [first post](/pages/01-intro.html#speed_selector).
 </div></blockquote>
 
 We need to come up with a way to represent a file on disk.

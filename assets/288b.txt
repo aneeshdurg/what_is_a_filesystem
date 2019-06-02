@@ -1,0 +1,5 @@
+This is a file containing 288B of data.
+That may seem like a lot but it really isn't much.
+With 288B we might be able to store an 18x16 pixel image with 8 bit color.
+We could store some kind of audio that could be used for a very simple "retro" game.
+In 288B, we can fit this small text.

@@ -15,7 +15,7 @@ const possible_commands = [
         "rm",
         "stat",
         "touch",
-        "trunc",
+        "truncate",
     ];
 
 // command syntax: [args] (> file(+offset))

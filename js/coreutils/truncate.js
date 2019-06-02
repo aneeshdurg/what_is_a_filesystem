@@ -1,7 +1,7 @@
-Shell.prototype.handle_trunc = async function(command) {;
+Shell.prototype.handle_truncate = async function(command) {;
     async function usage() {
         var help_msg =
-            "trunc filename filesize\n" +
+            "truncate filename filesize\n" +
             "\tTruncate or extend filename to be filesize bytes long\n";
         await this.filesystem.write(this.stderr, str_to_bytes(help_msg));
     }

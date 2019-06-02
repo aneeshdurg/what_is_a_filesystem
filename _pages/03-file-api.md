@@ -208,6 +208,18 @@ async function load_solution() {
 }
 </script>
 
+Aside from `/dev/zero` there's also a few other interesting virtual files.
+In particular, take a look at `/dev/stdin`/`/dev/stdout`/`/dev/stderr`.
+These files provide access to `stdin`, `stdout`, and `stderr` respectively.
+Underneath the hood `devfs` presents these files as symlinks to the current process's file descriptors via `procfs`.
+(You can check this with `file /dev/stdin`).
+
+In our shell simulator above, run `ls -a`.
+You'll see an entry `.shellfs`.
+In the simiulator `.shellfs/stdin`, `.shellfs/stdout`, and `.shellfs/stderr` provide access to the standard I/O mechanisms.
+Try running `cat /.shellfs/stdin` and confirm that the behaviour is the same as running `cat`.
+To explore the topic of managing filesystems and mounting them, see [section 9](/pages/09-mounting.html).
+
 ## Read/Write offsets
 
 You might have noticed in the FUSE function prototypes above that the read and write functions take in a `off_t` paramemter.
@@ -217,3 +229,5 @@ This means that if you read 1 byte, then perform another read of 1 byte, the fir
 In our javascript library, the offset needs to be managed by the filesystem itself
 (this is also true for filesystems implemented in the kernel, where the `off_t` parameter is usually a `off_t*` parameter instead).
 To accomplish this, you can use the `fd.offset` field and increment it by the number of bytes read/written.
+
+We'll discuss this more when we talk about reading and writing from disks in [section 6](/pages/06-reading-and-writing.html).
