@@ -1,8 +1,14 @@
 window.onload = main;
 
-function assert(cond) {
-    if (!cond)
-        throw Error("Assertion failed!");
+function assert(cond, msg) {
+    if (!cond) {
+        var error_msg = "Assertion failed!";
+        if (msg) {
+            error_msg += "\n" + msg;
+            console.log(msg);
+        }
+        throw Error(error_msg);
+    }
 }
 
 async function run_test(test) {

@@ -49,6 +49,9 @@ function MyFS(canvas) {
     this._inodes[0].is_directory = true;
     this._inodes[0].num_links = 1;
     this._inodes[0].permissions = 0o755;
+    this._inodes[0].update_atim();
+    this._inodes[0].update_mtim();
+    this._inodes[0].update_ctim();
 
     this.max_filesize = (this._inodes[0].num_indirect * this.block_size + this._inodes[0].num_direct) * this.block_size;
     if (canvas) {

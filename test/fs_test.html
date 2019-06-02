@@ -115,4 +115,80 @@ async function test_unlink() {
     assert(dirs.length == 2);
     return fs;
 }
+
+async function test_create() {
+    fs = new MyFS();
+    await fs.create("/newfile", 0o777);
+    var contents = await fs.readdir("/");
+    assert(contents.length == 3);
+    assert(contents[2].inodenum == 1);
+    assert(contents[2].filename == "newfile");
+    return fs;
+}
+
+async function test_stat() {
+    var fs = new MyFS();
+    var info = await fs.stat("/");
+    assert(info.path == "/");
+    assert(info.inodenum == 0);
+    assert(info.mode == 0o755, info.mode);
+    assert(info.is_directory);
+    assert(info.filesize == 0);
+    assert(info.atim);
+    assert(info.mtim);
+    assert(info.ctim);
+    return fs;
+}
+
+async function test_truncate() {
+    var fs = new MyFS();
+    var info = null;
+    await fs.create("/newfile", 0o777);
+
+    async function trunc_and_check(size) {
+        var error = await fs.truncate("/newfile", size);
+        info = await fs.stat("/newfile");
+        assert(info.filesize == size, info.filesize + "!=" + size);
+    }
+
+    await trunc_and_check(fs.block_size);
+    await trunc_and_check(fs.max_filesize);
+    await trunc_and_check(fs.block_size);
+    return fs;
+}
+
+async function test_chmod() {
+    var fs = new MyFS();
+    await fs.create("/newfile", 0o777);
+    await fs.chmod("/newfile", 0o444);
+    var info = await fs.stat("/newfile");
+    assert(info.mode == 0o444);
+    return fs;
+}
+
+async function test_ioctl() {
+    var fs = new MyFS();
+    var fd = await fs.open("/", O_RDONLY);
+    assert(typeof(await fs.ioctl(fd, IOCTL_SELECT_INODE)) !== 'string');
+    assert(typeof(await fs.ioctl(fd, IOCTL_IS_TTY)) === 'string');
+    return fs;
+}
+
+async function test_seek() {
+    var expected_str = "Hello data!";
+    var wrong_str = "Jello data!";
+
+    var fs = new MyFS();
+    await fs.create("/newfile", 0o777);
+    var fd = await fs.open("/newfile", O_RDWR);
+    await fs.write(fd, str_to_bytes(wrong_str));
+    await fs.seek(fd, 0, SEEK_SET);
+    await fs.write(fd, str_to_bytes("H"));
+    await fs.seek(fd, 0, SEEK_SET);
+    var data = new Uint8Array(new ArrayBuffer(expected_str.length));
+    await fs.read(fd, data);
+    assert(bytes_to_str(data) === expected_str);
+    return fs;
+}
+
 </script>
