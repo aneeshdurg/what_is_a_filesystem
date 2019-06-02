@@ -337,7 +337,10 @@ MyFS.prototype.create = async function (filename, mode, inode) {
     dirent_str += split_filename[1]; // filename
     dirent_str = dirent_str.padEnd(this.dirent_size, "\u0000"); // Add any necessary padding to meet the desired size.
     var dirent = str_to_bytes(dirent_str);
+    dirent[0] = found_inode;
     var error = await this.write(filedes, dirent);
+
+    this._inodes[found_inode].num_links++;
 
     if (typeof(error) == 'string')
         return error;
