@@ -151,18 +151,8 @@ window.onload = function () {
         "{{ write_placeholder }}", "return buffer.length;");
     s_container.innerHTML = solution_code;
 
-    // Cache input
-    var read_input = document.getElementById('{{ read_placeholder }}');
-    read_input.value = localStorage.getItem('{{ read_placeholder }}') || "";
-
-    var write_input = document.getElementById('{{ write_placeholder }}');
-    write_input.value = localStorage.getItem('{{ write_placeholder }}') || "";
-
-    setInterval(function() {
-        localStorage.setItem('{{ read_placeholder }}', read_input.value);
-        localStorage.setItem('{{ write_placeholder }}', write_input.value);
-    }, 1000);
-
+    cache_input("{{ read_placeholder }}");
+    cache_input("{{ write_placeholder }}");
 };
 
 async function load_solution() {
