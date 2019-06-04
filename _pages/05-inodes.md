@@ -179,13 +179,6 @@ Unfortunately our visulazation doesn't support multi-level indirection, so you'l
 ## Direct/Indirect block calculation questions
 
 Before we continue try these calculations our for yourself (press enter in the input box to check your answer):
-<script>
-function check_answer(value, correct) {
-    var correct = value == correct;
-    alert(correct ? 'correct!' : "sorry that's incorrect, try again");
-    return false;
-}
-</script>
 
 Given the filesystem we've been using for the visualizations (16B blocks, 1B addresses, 2 direct blocks and 1 indirect block per inode), answer the following:
 

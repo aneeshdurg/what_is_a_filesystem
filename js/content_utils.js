@@ -9,3 +9,8 @@ function create_canvas(id) {
   return canvas;
 }
 
+function check_answer(value, correct) {
+    var correct = value == correct;
+    alert(correct ? 'correct!' : "sorry that's incorrect, try again");
+    return false;
+}
