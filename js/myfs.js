@@ -422,7 +422,13 @@ MyFS.prototype.open = async function (filename, flags, mode) {
 
     var inode = this._inodes[inodenum];
     inode.update_atim();
-    // TODO check permissions (might not do this)
+
+    if ((flags & O_RDONLY) && !(inode.permissions & 0o400)) {
+        return "EPERM";
+    } else if ((flags & O_WRONLY) && !(inode.permissions & 0o200)) {
+        return "EPERM";
+    }
+
     if ((flags & O_TRUNC) && (flags & O_WRONLY)) {
         await this.empty_inode(inodenum);
         inode.filesize = 0;

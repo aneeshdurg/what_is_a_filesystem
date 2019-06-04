@@ -318,6 +318,8 @@ Shell.prototype.run_command = async function (input) {
         open_flags |= O_TRUNC;
 
     command.output = await this.filesystem.open(command_output, open_flags, this.umask);
+    if (typeof(command.output) === 'string')
+        return this._return_error("Could not open " + command_output + " for writing");
 
     for (var i = 0; i < possible_commands.length; i++) {
         if (command.arguments[0] == possible_commands[i])
@@ -326,7 +328,7 @@ Shell.prototype.run_command = async function (input) {
     var path = this.expand_path(command.arguments[0]);
     var file = await this.filesystem.open(path, O_RDONLY);
     if (typeof(file) === 'string')
-        return this._return_error("Invalid command: `" + command.input + "`");
+        return this._return_error("Invalid command: `" + command.input.trim() + "`");
 
     var info = await this.filesystem.stat(path);
     if (typeof(info) === 'string')
