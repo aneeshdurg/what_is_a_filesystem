@@ -38,7 +38,9 @@ LayeredFilesystem.prototype.resolve_fs_and_path = function(path) {
 }
 
 LayeredFilesystem.prototype.mount = async function(dir, fs) {
-    //this.verify_fs(fs);
+    if (!(fs instanceof DefaultFS))
+        return "EINVAL";
+
     var info = await this.stat(dir);
     if(!info.is_directory)
         return "ENOTDIR";

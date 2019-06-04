@@ -6,6 +6,8 @@ title: "Mounting and managing filesystems"
 ## What is __mounting__?
 ## Writing our own filesystem!
 
+<script src="/js/merge_memfs.js"></script>
+
 Way back in [section 3](/_pages/03-file-api.html) you wrote a mini filesystem that provided a single virtual file and implemented `read` and `write` for that file.
 Since then, you've hopefully learned a lot about how filesystems are structured and what the various callbacks provide,
 so let's revist the topic of writing filesystems and write a simple filesystem that can actually be used to store data.
@@ -30,7 +32,6 @@ async function setup_defaultfs() {
     var first = true;
     while (true) {
         var result = await reader.read();
-        console.log(result);
         if (result.done)
             break;
         if (first) {
@@ -100,7 +101,7 @@ This means that instead of implementing directories as regular files, they can i
 
 What do we need to store to describe a regular file (i.e. not a directory)?
 
-+ At a minimum we need to store data. (We can use strings since javascript strings can store null bytes)
++ At a minimum we need to store data. (We can use arrays of chars for easy use)
 + We've also learned that permissions are also useful to have.
 + Keeping track of the number of links let's us implement hard links and unlinking
 + We want to keep track of atim, mtim, and ctim. (Make sure to initialize all time field to `Date.now()`)
@@ -120,7 +121,7 @@ cache_input("file_class_input");
 function File() {
     this.num_links = 0;
     this.permissions = 0;
-    this.data = "";
+    this.data = [];
     this.atim = Date.now();
     this.mtim = Date.now();
     this.ctim = Date.now();
@@ -154,6 +155,7 @@ Note that we make `Directory` inherit from `File` so that we can generically use
 
 Now, we've layed out all the necessary components to setup the root of this filesystem.
 In the method below, create a property named root that points to a new, empty`Directory`.
+Make sure you set the permissions on the directory to `0o755` so that we actually have permissions to use the directory.
 
 <pre id="setup_root_memfs">
 MemFS.prototype.setup_root = function () {
@@ -167,6 +169,7 @@ cache_input("setup_root_input");
 <pre id="setup_root_soln">
 MemFS.prototype.setup_root = function () {
     this.root = new Directory();
+    this.root.permissions = 0o755;
 }
 </pre>
 </details>
@@ -190,6 +193,7 @@ cache_input("find_path_input");
 </script>
 <details><summary>Hints</summary>
 <div markdown="1">
++ When looking up "/", return the root directory.
 + Given a string `s = "/1/2/3"`, `s.split('/')` will return the array `["", "1", "2", "3"]`
 + Looking up a string in a map, like `this.root.files` can be done like so: `this.root.file["some string"]`
 + If a string lookup fails, the return value is `falsey` - using it in a if is equivalent to using `false`. If it succeedes, it would return a `File` object, and all objects are `truthy`.
@@ -199,6 +203,8 @@ cache_input("find_path_input");
 <details><summary>Solution</summary>
 <pre id="find_path_soln">
 MemFS.prototype.find_file_from_path = function (path) {
+    if (path == "/")
+        return this.root;
     var parts = path.split("/");
     var curr_file = null;
     // remove the initial empty entry
@@ -295,7 +301,7 @@ MemFS.prototype.mkdir = function (path, mode) {
 Now we can implement `readdir`.
 `readdir` returns an array of `Dirent`s (see [defs.js](/js/defs.js)).
 Just set `inodenum` to any number you want, since we don't have any use for an inode number in this filesystem.
-To do so, we must keep in mind that we also need to provide the entires for `.` and `..`.
+To do so, we must keep in mind that we also need to provide the entries for `.` and `..`.
 
 To list all elements of a map, use `Object.getOwnProperty(map)`.
 
@@ -322,10 +328,10 @@ MemFS.prototype.readdir = function (path) {
         new Dirent(0, '..')];
 
     for (e of Object.getOwnPropertyNames(file.files))
-        entires.push(new Dirent(0, e));
+        entries.push(new Dirent(0, e));
 
     file.atim = Date.now();
-    return entires;
+    return entries;
 };
 </pre>
 </details>
@@ -388,7 +394,7 @@ MemFS.prototype.unlink = function (path) {
     var parent_dir = this.find_file_from_path(split[0]);
     // Gauranteed to exist since path exists
 
-    delete parent_dir.file[split[1]];
+    delete parent_dir.files[split[1]];
 
     file.num_links--;
     file.atim = Date.now();
@@ -462,17 +468,14 @@ MemFS.prototype.stat = function (path) {
 </details>
 
 Next up, let's do truncate, which is extremely easy to do in javascript.
-All we need to do is call the `padEnd` method on the data of a file, or call the `slice` method.
 
-`padEnd` takes two values, a size and a string to pad with in that order.
-In our case, the string to pad with will be "\u0000" which inserts a null byte.
-If the size passed to `padEnd` is less than the current string size, it will do nothing.
+If the size passed in is greater that the length of the data, all we need to do is call `.push("\u0000")` on the file data repeated until it reaches the desired length.
 
 `slice` can take 1 or 2 arguments; we'll use the two argument variant.
 It takes a starting index and an ending index and returns a string containing the data between the start and end indicies.
 If the end index is past the end of the file, it does nothing.
 
-Note that neither `slice` nor `padEnd` modify the original data, they just return new strings.
+Note that `slice` does not modify the original data, it just returns a new array.
 
 Note that if the file does not exist, you don't need to create it here.
 
@@ -491,7 +494,8 @@ MemFS.prototype.truncate = function (path, size) {
     if (typeof(file) === 'string')
         return "ENOENT";
 
-    file.data = file.data.padEnd(size, "\u0000");
+    while (file.data.length < size)
+      file.data.push("\u0000");
     file.data = file.data.slice(0, size);
     return 0;
 };
@@ -571,7 +575,7 @@ MemFS.prototype.open = function (path, flags, mode) {
     if (flags & O_APPEND)
         fd.offset = file.data.length;
 
-    return 0;
+    return fd;
 };
 </pre>
 </details>
@@ -581,8 +585,8 @@ Now, on to `read`.
 Our goal is to fill the `Uint8Array` with as much data as possible and return the number of bytes we actually filled in. Note that you can access the underlying `File` for a `FileDescriptor` via the `.inode` property.
 
 To populate the array, try a for-loop and use the `charCodeAt` method of strings to get the byte values of chars in the data field.
-(e.g. `"asdf".charCodeAt(1)` will give us the ascii value of the character `s`).
-Make sure you start from the offset specified in the `FileDescriptor` passed in, and that you update that file descriptor by the number of bytes read at the end.
+(e.g. `"a".charCodeAt(0)` will give us the ascii value of the character `a`).
+Make sure you start returning bytes in the data array from the offset specified in the `FileDescriptor` passed in, and that you update that file descriptor by the number of bytes read at the end.
 
 If a read asks you to read past the end of the file, stop at the end of the file, and return the number of bytes read so far.
 As a specific case, if the offset is greater than or equal to the size of the file, return 0.
@@ -610,7 +614,7 @@ MemFS.prototype.read = function (fd, buffer) {
             break;
         }
 
-        buffer[i] = fd.inode.data.charCodeAt(fd.offset + i); 
+        buffer[i] = fd.inode.data[fd.offset + i].charCodeAt(0); 
         bytes_read++;
     }
     fd.offset += bytes_read; 
@@ -651,4 +655,23 @@ MemFS.prototype.write = function (fd, buffer) {
 };
 </pre>
 </details>
+
 ## MemFS
+<div id="shell_parent"></div>
+<button onclick="load_memfs(false)">Load MemFS from input</button>
+<button onclick="load_memfs(true)">Load MemFS from solutions</button>
+<script>
+var loaded = false;
+var lfs = null;
+var MemFS = null;
+function load_memfs(use_soln) {
+    if (loaded)
+        return;
+    MemFS = get_memfs_from_inputs(use_soln);
+    if (MemFS) {
+        lfs = new LayeredFilesystem(new MemFS());
+        var shell = new Shell(lfs, document.getElementById("shell_parent"));
+        shell.main();
+    }
+}
+</script>
