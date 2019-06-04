@@ -344,6 +344,7 @@ MyFS.prototype.create = async function (filename, mode, inode) {
     var error = await this.write(filedes, dirent);
 
     this._inodes[found_inode].num_links++;
+    this._inodes[found_inode].permissions = mode;
 
     if (typeof(error) == 'string')
         return error;
@@ -369,14 +370,28 @@ MyFS.prototype.truncate = async function (path, length) {
         console.log("Adding", zero_bytes.length, "bytes");
         return this.write(file, zero_bytes);
     } else if (length < inode.filesize) {
-        while ((length - inode.filesize) > this.block_size) {
-            var num_blocks = Math.floor(inode.filesize / this.dirent_size);
+        async function trim_block(inode) {
+            // if remainder is 0, we removed an entire block, otherwise we only removed remainder many bytes
+            var remainder = inode.filesize % this.block_size;
+            var num_blocks = Math.ceil(inode.filesize / this.dirent_size);
             var lastblock_num = await this.get_nth_blocknum_from_inode(inode, num_blocks - 1);
             await this.release_block(lastblock_num);
             if ((num_blocks - 1) == inode.num_direct)
                 await this.release_block(inode.indirect[0]);
-            inode.filesize -= this.block_size;
+            inode.filesize -= remainder ? remainder : this.block_size;
         }
+        console.log(length, inode.filesize);
+        var remainder = inode.filesize % this.block_size;
+        if (remainder) {
+            if ((inode.filesize - length) < remainder)
+                inode.filesize = length;
+            else
+                await trim_block.call(this, inode);
+        }
+
+        while ((inode.filesize - length) >= this.block_size)
+            await trim_block.call(this, inode);
+
         inode.filesize = length;
         inode.update_atim();
         inode.update_mtim();
