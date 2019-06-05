@@ -227,11 +227,14 @@ MemFS.prototype.find_file_from_path = function (path) {
     // Shift removes and returns the first element of the array
     parts.shift();
     curr_file = this.root;
+    curr_file.atim = Date.now();
+
     while (parts.length) {
         if (!(curr_file instanceof Directory))
             return "ENOENT";
 
         curr_file = curr_file.files[parts.shift()];
+        curr_file.atim = Date.now();
         if (!curr_file)
             return "ENOENT";
     }

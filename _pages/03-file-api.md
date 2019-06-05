@@ -97,18 +97,18 @@ inherit(MyVFS, DefaultFS);
 MyVFS.prototype.read = function (fd, buffer) {
     if (fd.path != "/zero")
         return "ENOENT";
-    {{ read_placeholder }}
+{{ read_placeholder }}
 };
 
 MyVFS.prototype.write = function (fd, buffer) {
     if (fd.path != "/zero")
         return "ENOENT";
-    {{ write_placeholder }}
+{{ write_placeholder }}
 };
 </pre>
 <br>
-<button onclick='load_solution()'>run</button>
 <p id='status'></p>
+<button onclick='load_solution()'>Mount in shell</button>
 <br>
 
 Try commands such as `echo hi > /dev/zero` and `hexdump -c 10 /dev/zero`
@@ -188,7 +188,7 @@ async function load_solution() {
         console.log(await fs.umount("/dev"));
         console.log(await fs.mkdir("/dev", 0o755));
         console.log(await fs.mount("/dev", new MyVFS()));
-        document.getElementById('status').innerText = "Success!";
+        document.getElementById('status').innerText = "Loaded!";
     } catch (e) {
         // TODO return error
         console.log("error", e);
