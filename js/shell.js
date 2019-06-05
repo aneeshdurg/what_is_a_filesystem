@@ -3,6 +3,7 @@ const possible_commands = [
         "cd",
         "chmod",
         "echo",
+        "edit",
         "exec",
         //"file", TODO implement file
         "hexdump",
@@ -134,6 +135,7 @@ Shell.prototype.setup_container_and_output = function(parent) {
 
     if (parent) {
         parent.appendChild(this.container);
+        this.parent = parent;
     }
 
     var that = this;
@@ -185,6 +187,59 @@ Shell.prototype.remove_container_event_listeners = function () {
 
     if (this.paste_listener)
         this.container.removeEventListener("paste", this.paste_listener, false);
+};
+
+Shell.prototype.create_extended_input = function (content) {
+    var that = this;
+    content = content || "";
+    if (this.extended_active)
+        return;
+
+    this.extended_active = {};
+    this.extended_active.cancelled = false;
+    this.extended_active.input_box = document.createElement("textarea");
+    this.extended_active.input_box.value = content;
+
+    this.extended_active.done = new Promise((resolve) => { that.extended_active.resolve = resolve; });
+
+    this.extended_active.confirm_button = document.createElement("button");
+    this.extended_active.confirm_button.innerText = "Save";
+    this.extended_active.confirm_button.onclick = function() {
+        that.extended_active.resolve();
+    };
+
+    this.extended_active.cancel_button = document.createElement("button");
+    this.extended_active.cancel_button.innerText = "cancel";
+    this.extended_active.cancel_button.onclick = function() {
+        that.extended_active.cancelled = true;
+        that.extended_active.resolve();
+    };
+
+
+
+    if (this.parent) {
+        this.parent.appendChild(this.extended_active.input_box);
+        this.parent.appendChild(this.extended_active.confirm_button);
+        this.parent.appendChild(this.extended_active.cancel_button);
+
+        this.extended_active.input_box.focus();
+    }
+};
+
+Shell.prototype.get_extended_output_and_cleanup = async function () {
+    if (!this.extended_active)
+        return;
+    await this.extended_active.done;
+    var output = this.extended_active.input_box.value;
+    if (this.extended_active.cancelled) {
+        output = null;
+    }
+
+    this.extended_active.input_box.remove();
+    this.extended_active.confirm_button.remove();
+    this.extended_active.cancel_button.remove();
+    delete this.extended_active;
+    return output;
 };
 
 Shell.prototype._init = async function (base_url) {
