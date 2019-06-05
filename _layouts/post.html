@@ -46,19 +46,19 @@ layout: default
 <script>
 document.body.onkeyup = function(e){
 if (document.activeElement != document.body) { return; }
-if (e.keyCode == '37') { window.location = '{{prevurl}}'; }
-if (e.keyCode == '39') { window.location = '{{nexturl}}'; }
+if (e.keyCode == '37') { window.location = '{{prevurl | relative_url }}'; }
+if (e.keyCode == '39') { window.location = '{{nexturl | relative_url }}'; }
 };
 </script>
 
 {% if prevurl %}
 <div align="left">
-  <a href="{{prevurl}}" class="prev">Previous Chapter</a>
+  <a href="{{prevurl | relative_url}}" class="prev">Previous Chapter</a>
 </div>
 {% endif %}
 
 {% if nexturl %}
 <div align="right">
-  <a href="{{nexturl}}" class="nxt">Next Chapter</a>
+  <a href="{{nexturl | relative_url}}" class="nxt">Next Chapter</a>
 </div>
 {% endif %}

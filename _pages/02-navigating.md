@@ -11,7 +11,7 @@ window.onload = async function() {
     for (shell_el of shell_containers) {
         await prev_shell_init;
         var shell = new Shell(new LayeredFilesystem(fs), shell_el);
-        shell.main();
+        shell.main("{{ site.baseurl }}");
         prev_shell_init = shell.initialized;
     }
 };

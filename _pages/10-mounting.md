@@ -4,11 +4,27 @@ title: "Mounting and managing filesystems"
 ---
 
 ## What is __mounting__?
+
+Up to this point, we've been looking at filesystems as a means of storing and accessing data, and we've discussed the filesystem interface in great detail,
+ but we haven't considered how to actually spawn a filesystem or how filesystems can interact with each other.
+
+It should be no surprised that most operating systems have the ability to manage multiple filesystems at a given time.
+For example, most pen drives are formatted to `FAT32` or `NTFS`, but linux systems, which usually use `ext4` as their native filesystem, can still interact with data on these pen drives.
+This is possible in a sane manner thanks to the ability to `mount` a filesystem.
+
+Mounting a filesystem generally refers to spawnning an instance of a filesystem, initializing it, and then assigning it a path on top of your existing file tree.
+Generally, in order to ensure that the paths you assign to a filesystem make sense, you need to have a pre-existing file or directory that you can set as the `mountpoint`.
+This is achieved either via the `mount` system call, or the `mount` utility.
+
+With something like `FUSE` that operates in userspace, when mounted, a program is started in userspace which handles all the filesystem callbacks.
+
+You can see an example of how we implemented mounting in our simulator at this file: [/js/lfs.js]({{ '/js/lfs.js' | relative_url }}).
+
 ## Writing our own filesystem!
 
-<script src="/js/merge_memfs.js"></script>
+<script src="{{ '/js/merge_memfs.js' | relative_url }}"></script>
 
-Way back in [section 3](/_pages/03-file-api.html) you wrote a mini filesystem that provided a single virtual file and implemented `read` and `write` for that file.
+Way back in [section 3]({{ '/_pages/03-file-api.html' | relative_url }}) you wrote a mini filesystem that provided a single virtual file and implemented `read` and `write` for that file.
 Since then, you've hopefully learned a lot about how filesystems are structured and what the various callbacks provide,
 so let's revist the topic of writing filesystems and write a simple filesystem that can actually be used to store data.
 
@@ -26,7 +42,7 @@ Let's take a look at the default filesystem interface that we'll be deriving our
 <pre id="defaultfs">Loading...</pre>
 <script>
 async function setup_defaultfs() {
-    var request = await fetch("/js/fs.js");
+    var request = await fetch("{{ '/js/fs.js' | relative_url }}");
     var reader = request.body.getReader();
     var target = document.getElementById("defaultfs");
     var first = true;
@@ -83,7 +99,7 @@ We don't need to implement `mount` or `umount` (we already have a filesystem tha
 We can ignore `ioctl`, a filesystem operation that's used to managed devices.
 We can use the default implementation of `seek`. Everything else has to be implemented by us.
 
-We've provided several helper functions in [/js/fs_helper.js](/js/fs_helper.js) and some helpful definitions in [/js/defs.js](/js/defs/js).
+We've provided several helper functions in [/js/fs_helper.js]({{ '/js/fs_helper.js' | relative_url }}) and some helpful definitions in [/js/defs.js]({{ '/js/defs.js' | relative_url }}).
 To kick things off, let's use `inherit` from `fs_helper.js` to inherit from `DefaultFS`.
 
 ```javascript
@@ -671,7 +687,7 @@ function load_memfs(use_soln) {
     if (MemFS) {
         lfs = new LayeredFilesystem(new MemFS());
         var shell = new Shell(lfs, document.getElementById("shell_parent"));
-        shell.main();
+        shell.main("{{ site.baseurl }}");
     }
 }
 </script>

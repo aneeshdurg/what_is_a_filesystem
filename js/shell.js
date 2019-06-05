@@ -167,7 +167,7 @@ Shell.prototype.remove_container_event_listeners = function () {
         this.container.removeEventListener("keydown", this.keydown_listener, false);
 };
 
-Shell.prototype._init = async function () {
+Shell.prototype._init = async function (base_url) {
     this.shellfs_root = "/.shellfs";
     this.shellfs = new ShellFS(this);
 
@@ -181,7 +181,7 @@ Shell.prototype._init = async function () {
     this.stderr = await this.filesystem.open(this.error_path);
 
 
-    var coreutils_scripts = possible_commands.map(x => "/js/coreutils/" + x + ".js");
+    var coreutils_scripts = possible_commands.map(x => base_url + "/js/coreutils/" + x + ".js");
     var coreutils_promises = [];
     for (src of coreutils_scripts) {
         var resolve = null;
@@ -280,8 +280,8 @@ Shell.prototype.scroll_container = async function () {
         this.container.scrollTop = this.container.scrollHeight;
 }
 
-Shell.prototype.main = async function () {
-    await this._init();
+Shell.prototype.main = async function (base_url) {
+    await this._init(base_url);
     while (true) {
         this.output.innerText += this.prompt(this);
         this.scroll_container();

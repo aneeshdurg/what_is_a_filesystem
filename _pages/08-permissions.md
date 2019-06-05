@@ -145,7 +145,7 @@ Try it out and use `stat` and `cat` to check/verify that permissions have been s
 <div id='shell'></div>
 <script>
 var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell"));
-shell.main();
+shell.main("{{ site.baseurl }}");
 </script>
 
 ## Executing file in the simulator

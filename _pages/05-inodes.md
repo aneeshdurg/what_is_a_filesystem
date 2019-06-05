@@ -5,7 +5,7 @@ title:  "Inodes and File Metadata"
 
 <blockquote><div markdown="1">
 In this section we'll be interacting with the filesystem visualizer.
-If you'd like to slow down or speed up the visualizations, please see the [first post](/pages/01-intro.html#speed_selector).
+If you'd like to slow down or speed up the visualizations, please see the [first post]({{ '/pages/01-intro.html#speed_selector' | relative_url }}).
 </div></blockquote>
 
 We need to come up with a way to represent a file on disk.
@@ -132,7 +132,7 @@ On most systems this cost isn't very high if you're accessing the data relativel
 
 Let's see this in action.
 For this demo you may want to set your animation speed to the default speed if you've changed it.
-See the [first post](/pages/1-intro.html) for instructions.
+See the [first post]({{ '/pages/1-intro.html' | relative_url }}) for instructions.
 
 Every time a disk block is read it will flash. Try to guess which block is the indirect block.
 

@@ -9,7 +9,6 @@ Reading and writing from inodes with direct and indirect blocks can be tricky bu
 Let's begin by considering the simplest cases, ones where we're reading a file that fits entirely into the direct blocks.
 This time each step in the animation will advance only when you press `step`.
 
-{% raw %}
 <div id='shell_1'></div>
 <canvas id='canvas_1'></canvas>
 <button onclick='step_fs_1()'>Step</button>
@@ -20,7 +19,7 @@ fs_1.animations.set_duration(10);
 var shell_1 = new Shell(new LayeredFilesystem(fs_1), document.getElementById('shell_1'));
 shell_1.remove_container_event_listeners();
 shell_1.prompt = function () { return "\n\n"; };
-shell_1.main();
+shell_1.main("{{ site.baseurl }}");
 async function create_file_from_remote(fs, remote, local) {
     var request = await fetch(remote);
     var reader = request.body.getReader();
@@ -44,7 +43,7 @@ function run_cat_on_shell(shell) {
 }
 var action_1 = (async function() {
     await shell_1.initialized;
-    await create_file_from_remote(fs_1, "/assets/32b.txt", "/file");
+    await create_file_from_remote(fs_1, "{{ '/assets/32b.txt' | relative_url}}", "/file");
     // TODO IOCTL_SET_ANIMATION_DURATION
     fs_1.animations.set_duration(0);
     run_cat_on_shell(shell_1);
@@ -53,7 +52,6 @@ function step_fs_1() {
     fs_1.animations.draw();
 }
 </script>
-{% endraw %}
 
 Notice how we read one block at a time?
 Many programs attempt to optimize read/write performance by always trying to access data the size of a block.
@@ -102,7 +100,6 @@ The filesystem callbacks for read and write can use this offset parameter to con
 Let's take a look at a slightly more involved example, one where the size of the file is equal to the maximum filesize.
 As we calculated in the [previous section](/pages/05-inodes.html), the maximum size of a file is `288B`.
 
-{% raw %}
 <div id='shell_2'></div>
 <canvas id='canvas_2'></canvas>
 <button onclick='step_fs_2()'>Step</button>
@@ -113,10 +110,10 @@ fs_2.animations.set_duration(10);
 var shell_2 = new Shell(new LayeredFilesystem(fs_2), document.getElementById('shell_2'));
 shell_2.remove_container_event_listeners();
 shell_2.prompt = function () { return "\n\n"; };
-shell_2.main();
+shell_2.main("{{ site.baseurl }}");
 var action_2 = (async function() {
     await shell_2.initialized;
-    await create_file_from_remote(fs_2, "/assets/288b.txt", "/file");
+    await create_file_from_remote(fs_2, "{{ '/assets/288b.txt' | relative_url }}", "/file");
     // TODO IOCTL_SET_ANIMATION_DURATION
     fs_2.animations.set_duration(0);
     run_cat_on_shell(shell_2);
@@ -125,7 +122,6 @@ function step_fs_2() {
     fs_2.animations.draw();
 }
 </script>
-{% endraw %}
 
 Notice how in this example, as you step through we access block 5 frequently.
 Can you guess why?
@@ -162,7 +158,7 @@ For example, try the following sequence of commands:
 + `truncate newfile 0`
 
 And watch how the disk is accessed in each case.
-(If you'd like to slow down or speed up the animations, please refer to the [first post](/pages/01-intro.html#speed_selector))
+(If you'd like to slow down or speed up the animations, please refer to the [first post]({{ '/pages/01-intro.html#speed_selector' | relative_url }}))
 
 <div id='shell_3'></div>
 <canvas id='canvas_3'></canvas>
@@ -170,5 +166,5 @@ And watch how the disk is accessed in each case.
 var canvas_3 = create_canvas('canvas_3');
 var fs_3 = new MyFS(canvas_3);
 var shell_3 = new Shell(new LayeredFilesystem(fs_3), document.getElementById('shell_3'));
-shell_3.main();
+shell_3.main("{{ site.baseurl }}");
 </script>

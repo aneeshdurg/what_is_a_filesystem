@@ -7,13 +7,13 @@ title:  "Introduction"
 var animated_shell;
 window.onload = function() {
     var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell_parent"));
-    shell.main();
+    shell.main("{{ site.baseurl }}");
     console.log("set up shell");
 
     var canvas = create_canvas('fs_vis');
     var animated_fs = new LayeredFilesystem(null, canvas);
     animated_shell = new Shell(animated_fs, document.getElementById("shell_fs_parent"));
-    animated_shell.main();
+    animated_shell.main("{{ site.baseurl }}");
     console.log("set up animated shell");
 };
 </script>

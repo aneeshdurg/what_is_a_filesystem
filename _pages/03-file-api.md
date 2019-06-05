@@ -131,7 +131,7 @@ var fs = new LayeredFilesystem();
 var orig_code = null;
 window.onload = function () {
     shell = new Shell(fs, document.getElementById("shell"));
-    shell.main();
+    shell.main("{{ site.baseurl }}");
 
     // Generate input boxes
     var q_container = document.getElementById('myvfs_code');

@@ -27,7 +27,7 @@ To view information about a particular file's inode, run `inodeinfo filename` (n
 var canvas = create_canvas('fs_1');
 var fs = new MyFS(canvas);
 var shell = new Shell(new LayeredFilesystem(fs), document.getElementById("shell_1"));
-shell.main();
+shell.main("{{ site.baseurl }}");
 </script>
 
 Every time you run `ls`, you'll notice that all blocks of the root directory inode are read and dirents are extracted.
@@ -54,7 +54,7 @@ shell_2.remove_container_event_listeners();
 shell_2.prompt = function () { return "\n\n"; };
 (async function() {
     await shell.initialized;
-    shell_2.main();
+    shell_2.main("{{ site.baseurl }}");
 })();
 function run_input(input) {
     for (i of input) {
@@ -104,7 +104,7 @@ Try it out for yourself:
 <script>
 var canvas_3 = create_canvas('fs_3');
 var shell_3 = new Shell(new LayeredFilesystem(null, canvas_3), document.getElementById("shell_3"));
-shell_3.main();
+shell_3.main("{{ site.baseurl }}");
 </script>
 
 Earlier we noted that inodes don't store their own names, and this is the reason why.
