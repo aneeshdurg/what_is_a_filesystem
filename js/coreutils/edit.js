@@ -42,10 +42,9 @@ Shell.prototype.handle_edit = async function (command) {
     }
 
     await this.filesystem.seek(file, 0, SEEK_SET);
-    console.log(file);
     var bytes_written = await this.filesystem.write(file, str_to_bytes(new_data));
     if (typeof(bytes_written) === 'string')
-        return this._return_bytes_written("Could not write to file (" + bytes_written + ")");
+        return this._return_error("Could not write to file (" + bytes_written + ")");
     await this.filesystem.write(this.stderr, str_to_bytes(
         "Wrote " + bytes_written + " bytes to " + command.arguments[1] + "\n"));
 

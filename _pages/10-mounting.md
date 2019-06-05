@@ -234,9 +234,10 @@ MemFS.prototype.find_file_from_path = function (path) {
             return "ENOENT";
 
         curr_file = curr_file.files[parts.shift()];
-        curr_file.atim = Date.now();
         if (!curr_file)
             return "ENOENT";
+
+        curr_file.atim = Date.now();
     }
     return curr_file;
 };
@@ -563,7 +564,7 @@ MemFS.prototype.open = function (path, flags, mode) {
         if (!mode)
             return "EINVAL";
         var error = this.create(path, mode);
-        if (typeof(error) === 'string')
+        if ((typeof(error) === 'string') && (error !== 'EEXISTS'))
             return error;
     }
 
