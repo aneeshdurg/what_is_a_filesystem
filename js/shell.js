@@ -157,7 +157,22 @@ Shell.prototype.setup_container_event_listeners = function () {
             stop_event(e);
     };
     this.container.addEventListener("keydown", this.keydown_listener, false);
+
+    this.paste_listner = function(event){
+        var text = event.clipboardData.getData('text');
+        var lines = text.split("\n");
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            for (var c of line) {
+                that.process_input(c, false);
+            }
+            if (i != (lines.length - 1))
+                that.process_input("Enter", false);
+        }
+    }
+    this.container.addEventListener("paste", this.paste_listner, false);
 }
+
 Shell.prototype.remove_container_event_listeners = function () {
     if (this.click_listner)
         this.container.removeEventListener("click", this.click_listner, false);
@@ -167,6 +182,9 @@ Shell.prototype.remove_container_event_listeners = function () {
 
     if (this.keydown_listener)
         this.container.removeEventListener("keydown", this.keydown_listener, false);
+
+    if (this.paste_listener)
+        this.container.removeEventListener("paste", this.paste_listener, false);
 };
 
 Shell.prototype._init = async function (base_url) {
