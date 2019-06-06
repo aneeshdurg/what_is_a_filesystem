@@ -95,9 +95,9 @@ This corresponds to how there's three possible permissions that can be granted t
 + write
 + execute
 
-The most significant bit of each octal digit corresponds to `read` permissions (0o4),
-the second bit corresponds to `write` permissions (0o2),
-and the least significant bit corresponds to `execute` permissions (0o1).
+The most significant bit of each octal digit corresponds to `read` permissions (`0o4 = 0b100 r--`),
+the second bit corresponds to `write` permissions (`0o2 = 0b010 -w-`),
+and the least significant bit corresponds to `execute` permissions (`0o1 = 0b001 --x`).
 By enabling or disabling these bits we can create files that restrict their usage.
 For example, you may want to make a file with read-only access by only setting the read bit.
 Or you  might want to ensure that files downloaded from the internet are not executable by default - forcing the user to manually enable execution if they trust the file.
@@ -125,11 +125,11 @@ As the owner, I need to read and write to file, but I don't need to execute the 
 So the most restrictive set of permissions I should apply to the owner is `0o6`.
 Note that `0o7` which enables execute also achieves read and write access, but it's not the most restrictive option.
 
-Now for the group we want only read permissions, described by `0o4`.
+Now for the group we want only read permissions, described by `0o4 = 0b100 (r--)`.
 
 And finally for other, we want no permissions, described by `0o0`.
 
-Putting these digits together we get `0o640 = 0b110100000 = 416`.
+Putting these digits together we get `0o640 = 0b110100000 = rw-r----- = 416`.
 </div>
 </details>
 <br>
@@ -148,9 +148,43 @@ var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell"))
 shell.main("{{ site.baseurl }}");
 </script>
 
-## Executing file in the simulator
+## Executing files in the simulator
 
 Our simulator does support marking file as executable.
 An executable file is assumed to contain javascript code evaluating to a function.
 
-TODO: insert tutorial here.
+For example, use the command `edit prog.js` to open a file and enter the following content:
+
+```javascript
+(async function (command){
+    await this.filesystem.write(command.output, str_to_bytes("hello world!\n"));
+    return 0;
+})
+```
+<div id='shell_1'></div>
+<script>
+var shell_1 = new Shell(new LayeredFilesystem(), document.getElementById("shell_1"));
+shell_1.main("{{ site.baseurl }}");
+</script>
+
+Press `save` and then try to run the program with `./prog.js`.
+
+That didn't work did it?
+That's because we need to mark the program as executable.
+Do `chmod 0o755 prog.js` to set the executable bit.
+
+With the permissions `0o755` can members of the group and others execute the file?
+<form onsubmit="check_answer(document.getElementById('yes').checked, true); return false;">
+    <input type="radio" name="question1" id="yes">Yes<br>
+    <input type="radio" name="question1" id="no">No<br>
+    <input type="submit" value="Check Answer">
+</form>
+<details><summary>Hint/answer</summary>
+<div markdown="1">
+Yes! `0o5=0b101 (r-x)`
+</div>
+</details>
+<br>
+
+To learn more about how to create executable programs in the simulator see this [tutorial]({{ '/pages/writing_programs.html' | relative_url }}).
+## Permissions for directories

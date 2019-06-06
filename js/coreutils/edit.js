@@ -1,4 +1,3 @@
-// TODO mention this in some page
 Shell.prototype.handle_edit = async function (command) {
     async function help() {
         const help_msg =

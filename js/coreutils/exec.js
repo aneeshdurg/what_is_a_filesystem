@@ -20,7 +20,7 @@ Shell.prototype.handle_exec = async function(command) {
     try {
         console.log(bytes_to_str(file_buffer));
         var program = eval(bytes_to_str(file_buffer));
-        return program.call(this, command);
+        return await program.call(this, command);
     } catch (e) {
         return this._return_error(e.message);
     }

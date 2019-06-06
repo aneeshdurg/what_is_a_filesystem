@@ -28,6 +28,9 @@ Way back in [section 3]({{ '/_pages/03-file-api.html' | relative_url }}) you wro
 Since then, you've hopefully learned a lot about how filesystems are structured and what the various callbacks provide,
 so let's revist the topic of writing filesystems and write a simple filesystem that can actually be used to store data.
 
+If you want to skip ahead to the end and try your hand at implementing your own filesystems that do interesting things,
+see the tutorial at [/pages/writing-programs]({{ '/pages/writing-programs.html' | relative_url }}).
+
 The filesystem we'll be implementing will be an in-memory filesystem, meaning that all data will be stored in memory and when the filesystem process ends
 (or in our case, the page is refreshed or closed), all associated data will be lost.
 This is useful for implementing something like `/tmp` on most linux systems which store temporary files until the system is rebooted.
@@ -60,7 +63,7 @@ async function setup_defaultfs() {
 setup_defaultfs();
 </script>
 
-You can find the full details regarding each callback in [/pages/filesystem_operations.html]({{ '/pages/filesystem_operations.html' | relative_url }}).
+You can find the full details regarding each callback in [/pages/filesystem-operations.html]({{ '/pages/filesystem-operations.html' | relative_url }}).
 
 <details><summary>How do classes work in javascript?</summary>
 <div markdown="1">

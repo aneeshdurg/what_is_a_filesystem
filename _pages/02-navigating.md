@@ -89,6 +89,14 @@ Once you finish, run `cat newfile` to print the contents of `newfile`.
 
 Note that if we run `stat` now we'll see that the filesize has increased.
 
+We've also implemented a `GUI` editor to make it easier to edit text.
+Use the command `edit [filename]` to invoke it.
+Note that unlike piping the output of `cat` (the output redirection trick we did earlier),
+the command `edit` is not a real utlity used to edit files.
+
+<div id="shell_6"></div>
+<br>
+
 # Deleting files and directories
 
 To delete files and directories we'll use the command `rm`.
@@ -96,7 +104,7 @@ To delete files and directories we'll use the command `rm`.
 Try deleting `newfile` and `newdir`.
 Run `ls` afterwards to confirm that the files have been deleted.
 
-<div id="shell_6"></div>
+<div id="shell_7"></div>
 <br>
 
 `rm newdir` didn't work did it?
