@@ -13,6 +13,8 @@ layout: default
     <h2 class="post-list-heading">{{ page.list_title | default: "Table of Contents" }}</h2>
     <ul class="post-list">
       {%- for post in site.pages -%}
+      {%- if post.hide_toc -%}   
+      {%- else -%}
       <li>
         <h3>
           <a class="post-link" href="{{ post.url | relative_url }}">
@@ -23,6 +25,7 @@ layout: default
           {{ post.excerpt }}
         {%- endif -%}
       </li>
+      {%- endif -%}
       {%- endfor -%}
     </ul>
 

@@ -60,6 +60,8 @@ async function setup_defaultfs() {
 setup_defaultfs();
 </script>
 
+You can find the full details regarding each callback in [/pages/filesystem_operations.html]({{ '/pages/filesystem_operations.html' | relative_url }}).
+
 <details><summary>How do classes work in javascript?</summary>
 <div markdown="1">
 The code above defines a class in javascript named `defaultFS`.
