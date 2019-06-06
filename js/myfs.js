@@ -1,3 +1,5 @@
+const IOCTL_SET_ANIMATION_DURATION = get_unused_ioctl_num();
+
 // Paths cannot have trailing / or // anywhere
 // max filename length = 15
 function MyFS(canvas) {
@@ -647,12 +649,19 @@ MyFS.prototype.read = async function (filedes, buffer) {
 };
 
 MyFS.prototype.ioctl = async function (filedes, request, obj) {
-    filedes.inode.update_atim();
-    if (request != IOCTL_SELECT_INODE)
-        return "EIMPL";
+	if (request == IOCTL_SELECT_INODE) {
+    	filedes.inode.update_atim();
+    	if (this.animations)
+        	this.animations.select_inode(filedes.inodenum, filedes.inode);
+	} else if (request == IOCTL_SET_ANIMATION_DURATION) {
+		if (obj.save)
+			this.animations.save_duration(obj.duration);
+		else
+			this.animations.set_duration(obj.duration);
+	} else {
+		return "EIMPL";
+	}
 
-    if (this.animations)
-        this.animations.select_inode(filedes.inodenum, filedes.inode);
 
     return 0;
 };

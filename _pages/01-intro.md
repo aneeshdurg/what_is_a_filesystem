@@ -5,13 +5,14 @@ title:  "Introduction"
 
 <script>
 var animated_shell;
+var animated_fs;
 window.onload = function() {
     var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell_parent"));
     shell.main("{{ site.baseurl }}");
     console.log("set up shell");
 
     var canvas = create_canvas('fs_vis');
-    var animated_fs = new LayeredFilesystem(null, canvas);
+    animated_fs = new LayeredFilesystem(null, canvas);
     animated_shell = new Shell(animated_fs, document.getElementById("shell_fs_parent"));
     animated_shell.main("{{ site.baseurl }}");
     console.log("set up animated shell");
@@ -67,14 +68,20 @@ for (var i = 10; i <= 100; i++) {
     opt.innerText = i + "ms";
     document.getElementById('speed_selector').appendChild(opt);
 }
-function change_speed() {
-    var speed_value = document.getElementById('speed_selector').value || "100";
-    localStorage.setItem("ANIMATOR_DURATION", speed_value);
+async function change_speed() {
+    var speed_value = document.getElementById('speed_selector').value;
+    animated_fs.ioctl(
+        await animated_fs.open("/", O_ACCESS),
+        IOCTL_SET_ANIMATION_DURATION,
+        {
+            duration: speed_value,
+            save: true,
+        }
+    );
     alert("Changed animation speed to "+ speed_value + "ms");
 }
 </script>
 
-Note that for the change to take place you must reload the page.
 Changing the speed here will change the speed of all animations on this website.
 
 When you're done playing with the shell above, click `Next Chapter` or press the right arrow key to advance to the next page!

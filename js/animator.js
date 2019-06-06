@@ -32,6 +32,8 @@ function FSAnimator(fs, canvas, block_limit) {
 
 // TODO implement IOCTL_SET_ANIMATION_DURATION
 FSAnimator.prototype.set_duration = function(duration) {
+    duration = Number(duration);
+
     this.duration = duration;
     console.log("Animation speed is set to", this.duration);
 
@@ -41,7 +43,12 @@ FSAnimator.prototype.set_duration = function(duration) {
       this.timer = setInterval(() => { that.draw() }, this.duration);
 };
 
-FSAnimator.prototype.reload_duration = function(duration) {
+FSAnimator.prototype.save_duration = function(duration) {
+    this.set_duration(duration);
+    localStorage.setItem("ANIMATOR_DURATION", this.duration);
+}
+
+FSAnimator.prototype.reload_duration = function() {
     this.set_duration(Number(localStorage.getItem("ANIMATOR_DURATION")) || 100);
 };
 

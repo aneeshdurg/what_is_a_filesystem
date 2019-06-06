@@ -11,8 +11,15 @@ const SEEK_SET = 0;
 const SEEK_END = 1;
 const SEEK_CURR = 2;
 
-const IOCTL_IS_TTY = 0;
-const IOCTL_SELECT_INODE = 1;
+/**
+ * IOCTL numbers need to be unique, this is a good way of ensuring that.
+ * Arguably, this is overkill, since they only need to be unique *per* filesystem.
+ */
+var __ioctl_counter = 0;
+function get_unused_ioctl_num() { return __ioctl_counter++; }
+
+const IOCTL_IS_TTY = get_unused_ioctl_num();
+const IOCTL_SELECT_INODE = get_unused_ioctl_num();
 
 function FileDescriptor(fs, path, inodenum, inode, mode) {
     this.fs = fs;

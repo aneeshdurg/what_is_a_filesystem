@@ -15,7 +15,10 @@ This time each step in the animation will advance only when you press `step`.
 <script>
 var canvas_1 = create_canvas('canvas_1');
 var fs_1 = new MyFS(canvas_1);
-fs_1.animations.set_duration(10);
+fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+    duration: 10,
+    save: false,
+});
 var shell_1 = new Shell(new LayeredFilesystem(fs_1), document.getElementById('shell_1'));
 shell_1.remove_container_event_listeners();
 shell_1.prompt = function () { return "\n\n"; };
@@ -44,8 +47,10 @@ function run_cat_on_shell(shell) {
 var action_1 = (async function() {
     await shell_1.initialized;
     await create_file_from_remote(fs_1, "{{ '/assets/32b.txt' | relative_url}}", "/file");
-    // TODO IOCTL_SET_ANIMATION_DURATION
-    fs_1.animations.set_duration(0);
+    fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+        duration: 0,
+        save: false,
+    });
     run_cat_on_shell(shell_1);
 })();
 function step_fs_1() {
@@ -65,8 +70,6 @@ To re-run the above example after running this one, reload the page.
 <button onclick='step_5b_read()'>read 5b</button>
 <script>
 var pre = document.getElementById('5b_read');
-// TODO create mirrored filesystems?
-// TODO allow multiple canvases per filesystem?
 var setup_done = false;
 var fd = null;
 async function setup_step_5b_read() {
@@ -78,7 +81,10 @@ async function setup_step_5b_read() {
     return fd;
 }
 async function step_5b_read() {
-    fs_1.animations.set_duration(10);
+    fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+        duration: 10,
+        save: false,
+    });
     var file = await setup_step_5b_read();
     var buffer = new Uint8Array(new ArrayBuffer(5));
     var bytes_read = await fs_1.read(file, buffer);
@@ -106,7 +112,10 @@ As we calculated in the [previous section](/pages/05-inodes.html), the maximum s
 <script>
 var canvas_2 = create_canvas('canvas_2');
 var fs_2 = new MyFS(canvas_2);
-fs_2.animations.set_duration(10);
+fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+        duration: 10,
+        save: false,
+});
 var shell_2 = new Shell(new LayeredFilesystem(fs_2), document.getElementById('shell_2'));
 shell_2.remove_container_event_listeners();
 shell_2.prompt = function () { return "\n\n"; };
@@ -115,7 +124,10 @@ var action_2 = (async function() {
     await shell_2.initialized;
     await create_file_from_remote(fs_2, "{{ '/assets/288b.txt' | relative_url }}", "/file");
     // TODO IOCTL_SET_ANIMATION_DURATION
-    fs_2.animations.set_duration(0);
+    fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+        duration: 0,
+        save: false,
+    });
     run_cat_on_shell(shell_2);
 })();
 function step_fs_2() {

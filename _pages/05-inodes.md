@@ -39,7 +39,10 @@ Let's take a look at an example.
 <script>
 var canvas_1 = create_canvas('canvas_1');
 var fs_1 = new MyFS(canvas_1);
-fs_1.animations.set_duration(10);
+fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+    duration: 10,
+    save: false,
+});
 (async function() {
     await fs_1.create("/file", 0o777);
     await fs_1.truncate("/file", 32);
@@ -59,7 +62,11 @@ Here you can see another example where we have a file who's contents are not con
 <script>
 var canvas_2 = create_canvas('canvas_2');
 var fs_2 = new MyFS(canvas_2);
-fs_2.animations.set_duration(10);
+fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+    duration: 10,
+    save: false,
+});
+
 var setup_2 = (async function() {
     await fs_2.create("/file", 0o777);
     await fs_2.truncate("/file", 16);
@@ -143,7 +150,10 @@ Every time a disk block is read it will flash. Try to guess which block is the i
 var canvas_3 = create_canvas('canvas_3');
 var fs_3 = new MyFS(canvas_3);
 var setup_3 = (async function() {
-    fs_3.animations.set_duration(10);
+    fs_3.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
+        duration: 10,
+        save: false,
+    });
     await fs_3.create("/file", 0o777);
     await fs_3.truncate("/file", fs_3.max_filesize);
     fs_3.animations.reload_duration();
