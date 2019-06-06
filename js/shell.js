@@ -5,7 +5,6 @@ const possible_commands = [
         "echo",
         "edit",
         "exec",
-        //"file", TODO implement file
         "hexdump",
         "inodeinfo",
         "link",
@@ -285,7 +284,6 @@ Shell.prototype.process_input = function (key, ctrlkey) {
         if (ctrlkey && key == 'd') {
             this.stdin_closed = true;
         } else if (ctrlkey) {
-            // TODO support paste
             return false;
         } else {
             to_append = key;
@@ -416,7 +414,6 @@ Shell.prototype.path_join = function(path1, path2) {
 
 
 Shell.prototype.expand_path = function(path) {
-    // TODO rewrite using path_join
     var curr_dir = this.current_dir.split("/");
     var parts = path.split("/");
     if (parts[0] == "") {

@@ -190,7 +190,6 @@ async function load_solution() {
         console.log(await fs.mount("/dev", new MyVFS()));
         document.getElementById('status').innerText = "Loaded!";
     } catch (e) {
-        // TODO return error
         console.log("error", e);
         alert(e.message + "\n\n" + e.stack);
         document.getElementById('status').innerText = "Error";

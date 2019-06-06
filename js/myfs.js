@@ -438,6 +438,10 @@ MyFS.prototype.open = async function (filename, flags, mode) {
     var inode = this._inodes[inodenum];
     inode.update_atim();
 
+    if ((flags & O_DIRECTORY) && !(inode.is_directory)) {
+        return "ENOTDIR";
+    }
+
     if ((flags & O_RDONLY) && !(inode.permissions & 0o400)) {
         return "EPERM";
     } else if ((flags & O_WRONLY) && !(inode.permissions & 0o200)) {

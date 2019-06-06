@@ -11,8 +11,6 @@ Shell.prototype.handle_cd = async function(command) {
     if (typeof(info) === 'string') {
         error = info;
     } else if (!info.is_directory) {
-        // TODO consider implementing O_DIRECTORY
-        // that would replace this check and the next by a call to open
         error = "ENOTDIR";
     } else if (!(info.mode & 0o100)) {
         error = "ENOPERM";

@@ -1,5 +1,3 @@
-// TODO implement mount
-
 Shell.prototype.handle_mount = async function(command) {
     async function help() {
         const help_msg =
@@ -48,7 +46,6 @@ Shell.prototype.handle_mount = async function(command) {
 
     if (fs == should_exec) {
         var fs_path = that.expand_path(filesystem);
-        // TODO allow arguments to be passed in
         var exec_command = new Command("exec " + fs_path);
         fs = await this.handle_exec(exec_command);
         if (typeof(fs) === 'string')
