@@ -183,13 +183,16 @@ MyFS.prototype.unlink = async function(path) {
     inode = this._inodes[inodenum];
 
     inode.update_atim();
-    inode.update_mtim();
+    inode.update_ctim();
 
     inode.num_links--;
     if (inode.num_links == 0) {
         await this.empty_inode(inodenum);
         if (this.animations)
             await this.animations.deregister_inode(inodenum);
+        inode.atim = 0;
+        inode.mtim = 0;
+        inode.ctim = 0;
     }
 
     var split_filename = split_parent_of(path);
@@ -347,6 +350,8 @@ MyFS.prototype.create = async function (filename, mode, inode) {
 
     this._inodes[found_inode].num_links++;
     this._inodes[found_inode].permissions = mode;
+    this._inodes[found_inode].update_atim();
+    this._inodes[found_inode].update_ctim();
 
     if (typeof(error) == 'string')
         return error;
@@ -475,7 +480,6 @@ MyFS.prototype.chmod = async function(path, permissions) {
     var inode = this._inodes[inodenum];
     inode.permissions = permissions;
     inode.update_atim();
-    inode.update_mtim();
     inode.update_ctim();
 
     return 0;
