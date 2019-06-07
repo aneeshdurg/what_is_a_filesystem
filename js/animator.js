@@ -159,35 +159,74 @@ FSAnimator.prototype.register_inode = async function (inodenum){
     await p;
 };
 
+// https://stackoverflow.com/a/6333775/5803067
+function canvas_arrow(context, fromx, fromy, tox, toy){
+    var headlen = 10;   // length of head in pixels
+    var angle = Math.atan2(toy-fromy,0);
+    context.beginPath();
+    context.moveTo(fromx, fromy);
+    context.bezierCurveTo(fromx, fromy + 20, tox, toy + 20, tox, toy);
+    context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+    context.moveTo(tox, toy);
+    context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+    context.stroke();
+}
+
 FSAnimator.prototype.select_inode = function (inodenum, inode){
-  console.log("Selected " + (new Error()).stack);
-  this.ctx.translate(0, this.ctx.canvas.height / 2);
-  this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
-  this.ctx.beginPath();
-  this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
-  this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
-  this.ctx.fillStyle = this.registered_inodes[inodenum];
-  this.ctx.fill();
-  this.ctx.stroke();
+    console.log("Selected " + (new Error()).stack);
+    this.ctx.translate(0, this.ctx.canvas.height / 2);
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
+    this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
+    this.ctx.fillStyle = this.registered_inodes[inodenum];
+    this.ctx.fill();
+    this.ctx.stroke();
 
-  var w_offset = this.inode_width * 5 + 5;
-  var h_offset = 25;
+    var w_offset = this.inode_width * 5 + 5;
+    var h_offset = 25;
 
-  var font_size = 20;
-  this.ctx.font = font_size + "px Courier New";
+    var font_size = 20;
+    this.ctx.font = font_size + "px Courier New";
+    var font_width = this.ctx.measureText(" ").width;
 
-  this.ctx.beginPath();
-  this.ctx.fillStyle = "black";
-  this.ctx.fillText("Inode: " + inodenum, w_offset, h_offset);
-  h_offset += 20;
+    var num_blocks = Math.ceil(inode.filesize / this.fs.block_size);
 
-  this.ctx.fillText("Filesize: " + inode.filesize, w_offset, h_offset);
-  h_offset += 20;
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "black";
+    this.ctx.fillText("Inode: " + inodenum, w_offset, h_offset);
+    h_offset += 20;
 
-  this.ctx.fillText("Direct: " + Array.from(inode.direct).join(" "), w_offset, h_offset);
-  h_offset += 20;
+    this.ctx.fillText("Filesize: " + inode.filesize, w_offset, h_offset);
+    h_offset += 20;
 
-  this.ctx.fillText("Indirect: " + Array.from(inode.indirect).join(" "), w_offset, h_offset);
-  h_offset += 20;
-  this.ctx.translate(0, -1 * this.ctx.canvas.height / 2);
+    if (num_blocks) {
+        var num_direct = Math.min(num_blocks, inode.direct.length);
+        var direct_blocks_view = new Uint8Array(inode.direct.buffer, 0, num_direct);
+        var direct_str = "Direct: " + Array.from(direct_blocks_view).join(" ");
+        num_blocks -= num_direct;
+        this.ctx.fillText(direct_str, w_offset, h_offset);
+        h_offset += 20;
+    }
+
+    if (num_blocks) {
+        this.ctx.fillText("Indirect: " + Array.from(inode.indirect).join(" "), w_offset, h_offset);
+        canvas_arrow(
+            this.ctx,
+            w_offset + font_width * "Indirect: 0".length,
+            h_offset - 10,
+            this.inode_width * this.fs.num_inodes + this.block_width * inode.indirect,
+            5);
+        h_offset += 20;
+        var disk_offset = inode.indirect[0] * this.fs.block_size;
+        var indirect_array = new Uint8Array(this.fs.disk, disk_offset, num_blocks);
+        var indirect_array_str = indirect_array.join(" ");
+
+        this.ctx.fillText(indirect_array_str, w_offset + font_width * "Indirect: ".length, h_offset);
+        h_offset += 20;
+
+        num_blocks = 0;
+    }
+
+    this.ctx.translate(0, -1 * this.ctx.canvas.height / 2);
 };
