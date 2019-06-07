@@ -123,7 +123,6 @@ shell_2.main("{{ site.baseurl }}");
 var action_2 = (async function() {
     await shell_2.initialized;
     await create_file_from_remote(fs_2, "{{ '/assets/288b.txt' | relative_url }}", "/file");
-    // TODO IOCTL_SET_ANIMATION_DURATION
     fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
         duration: 0,
         save: false,

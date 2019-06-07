@@ -136,7 +136,10 @@ A limitation of hardlinks is that they can only point to inodes which are on the
 We may want to overcome this limitation, and have a file that links to file on other disks/filesystems that might not always be accessible.
 One potential solution is the use of softlinks, or symbolic links. We won't go into any detail regarding softlinks here, but the [coursebook](https://github.com/illinois-cs241/coursebook/wiki/Filesystems#linking) has a good description and even better examples. Our toy filesystem/file IO library doesn't support symbolic links.
 
-Try writing your own filesystem that does support some kind of softlinks! You can write/test it at this link: TODO make this feature
+Try writing your own filesystem that does support some kind of softlinks!
+You can use software like [FUSE](https://github.com/libfuse/libfuse) or write a filesystem within our simulator.
+[Section 10]({{ '/pages/10-mounting.html' | relative_url }}) has a brief tutorial on writing a filesystem in our simulator,
+and [/pages/writing-programs.html]({{ '/pages/writing-programs.html' | relative_url}}) has some extended documentation on writing your own filesystems as executable programs.
 
 ## Paths
 

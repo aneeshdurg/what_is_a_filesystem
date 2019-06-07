@@ -238,7 +238,7 @@ To implement a filesystem for mounting, writing a program that returns a filesys
 To see more information on how to write a filesystem, read [/pages/filesystem-operations.html]({{ '/pages/filesystem-operations.html' | relative_url }})
 and [/pages/10-mounting.html]({{ '/pages/10-mounting.html' | relative_url }}).
 
-The run `mount path [path_to_fs_program_filename]` to mount your filesystem.
+Then run `mount path [path_to_fs_program_filename]` to mount your filesystem.
 It may look something like this:
 
 ```javascript

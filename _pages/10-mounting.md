@@ -92,7 +92,7 @@ MyClass.prototype.print_my_x = function () {
 };
 ```
 
-TODO add tutorial link here
+[W3School has really good javascript tutorials if you want to learn more.](https://www.w3schools.com/js/js_object_prototypes.asp)
 </div>
 </details>
 <br>

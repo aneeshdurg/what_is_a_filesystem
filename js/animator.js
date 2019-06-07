@@ -30,7 +30,6 @@ function FSAnimator(fs, canvas, block_limit) {
     this.reload_duration();
 }
 
-// TODO implement IOCTL_SET_ANIMATION_DURATION
 FSAnimator.prototype.set_duration = function(duration) {
     duration = Number(duration);
 
