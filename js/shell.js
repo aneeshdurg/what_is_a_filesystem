@@ -1,24 +1,86 @@
 const possible_commands = [
-        "cat",
-        "cd",
-        "chmod",
-        "echo",
-        "edit",
-        "exec",
-        "hexdump",
-        "inodeinfo",
-        "link",
-        "ls",
-        "mkdir",
-        "mount",
-        "read",
-        "replace",
-        "rm",
-        "stat",
-        "touch",
-        "truncate",
-        "umount",
-    ];
+    {
+        name: "cat",
+        description: "Concatenate files and input streams " + 
+            "(can also be used to dump content to stdout or write stdin to files)",
+    },
+    {
+        name: "cd",
+        description: "Change current working directory",
+    },
+    {
+        name: "chmod",
+        description: "Change mode of a file",
+    },
+    {
+        name: "echo",
+        description: "Echo command line arguments to stdout",
+    },
+    {
+        name: "edit",
+        description: "Open a graphic editor",
+    },
+    {
+        name: "exec",
+        description: "Execute a program on the filesystem",
+    },
+    {
+        name: "help",
+        description: "Show this help message",
+    },
+    {
+        name: "hexdump",
+        description: "View the hexadecimal representation of bytes in a file",
+    },
+    {
+        name: "inodeinfo",
+        description: "Inspect an inode",
+    },
+    {
+        name: "link",
+        description: "Creates hardlinks",
+    },
+    {
+        name: "ls",
+        description: "List contents of a directory",
+    },
+    {
+        name: "mkdir",
+        description: "Make a directory",
+    },
+    {
+        name: "mount",
+        description: "Mount a filesystem",
+    },
+    {
+        name: "read",
+        description: "read a file",
+    },
+    {
+        name: "replace",
+        description: "Replace one string from an input stream with another in the output",
+    },
+    {
+        name: "rm",
+        description: "unlinks a file",
+    },
+    {
+        name: "stat",
+        description: "Get information about a file",
+    },
+    {
+        name: "touch",
+        description: "Create a file or update the last modified time of a file.",
+    },
+    {
+        name: "truncate",
+        description: "Extend or shrink the size of a file",
+    },
+    {
+        name: "umount",
+        description: "Unmount a filesystem",
+    },
+];
 
 // command syntax: [args] (> file(+offset))
 function Command(input, stdout_path) {
@@ -124,7 +186,7 @@ Shell.prototype.setup_container_and_output = function(parent) {
     this.container = document.createElement("div");
     this.container.tabIndex = "0";
     this.container.style.maxHeight = "250px";
-    this.container.style.overflow = "scroll";
+    this.container.style.overflow = "auto";
     //this.container.style.height = "20%";
     //this.container.style.overflow = "scroll";
 
@@ -255,7 +317,7 @@ Shell.prototype._init = async function (base_url) {
     this.stderr = await this.filesystem.open(this.error_path);
 
 
-    var coreutils_scripts = possible_commands.map(x => base_url + "/js/coreutils/" + x + ".js");
+    var coreutils_scripts = possible_commands.map(x => base_url + "/js/coreutils/" + x.name + ".js");
     var coreutils_promises = [];
     for (src of coreutils_scripts) {
         var resolve = null;
@@ -395,8 +457,8 @@ Shell.prototype.run_command = async function (input) {
         return this._return_error("Could not open " + command_output + " for writing");
 
     for (var i = 0; i < possible_commands.length; i++) {
-        if (command.arguments[0] == possible_commands[i])
-            return this['handle_' + possible_commands[i]](command);
+        if (command.arguments[0] == possible_commands[i].name)
+            return this['handle_' + possible_commands[i].name](command);
     }
     command.arguments.unshift("exec");
     return this['handle_exec'](command);

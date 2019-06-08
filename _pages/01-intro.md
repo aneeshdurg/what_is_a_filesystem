@@ -44,7 +44,7 @@ You can also use the up and down arrow keys to repeat commands you've run before
 Don't worry if all of this sounds unfamiliar to you!
 We will explain more about how these commands work as we go along.
 
-You can see a full list of our commands and their usages by typing `help` into the command line. TODO implement help
+You can see a full list of our commands and their usages by typing `help` into the command line.
 
 Below you can see our visulization for how a filesystem interacts with a disk.
 It may look daunting now, but it will be demystified in further chapters as we learn more about filesystems and disks.
