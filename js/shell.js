@@ -82,6 +82,8 @@ const possible_commands = [
     },
 ];
 
+var coreutils_promises = null;
+
 // command syntax: [args] (> file(+offset))
 function Command(input, stdout_path) {
     this.input = input;
@@ -316,18 +318,19 @@ Shell.prototype._init = async function (base_url) {
 
     this.stderr = await this.filesystem.open(this.error_path);
 
+    if (!coreutils_promises) {
+        coreutils_promises = [];
+        var coreutils_scripts = possible_commands.map(x => base_url + "/js/coreutils/" + x.name + ".js");
+        for (src of coreutils_scripts) {
+            var resolve = null;
+            var p = new Promise(r => resolve = r);
+            coreutils_promises.push(p)
 
-    var coreutils_scripts = possible_commands.map(x => base_url + "/js/coreutils/" + x.name + ".js");
-    var coreutils_promises = [];
-    for (src of coreutils_scripts) {
-        var resolve = null;
-        var p = new Promise(r => resolve = r);
-        coreutils_promises.push(p)
-
-        var script_el = document.createElement("script");
-        script_el.src = src;
-        script_el.onload = resolve;
-        document.head.appendChild(script_el);
+            var script_el = document.createElement("script");
+            script_el.src = src;
+            script_el.onload = resolve;
+            document.head.appendChild(script_el);
+        }
     }
 
     for (p of coreutils_promises) {
