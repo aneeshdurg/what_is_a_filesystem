@@ -1,6 +1,7 @@
 ---
 layout: post
 title: "Writing Programs (and filesystems)"
+hide_toc: true
 ---
 
 If you've stumbled upon this page you're probably trying to write your own programs in the simulator.
