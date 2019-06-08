@@ -166,9 +166,9 @@ function canvas_arrow(context, fromx, fromy, tox, toy){
     context.beginPath();
     context.moveTo(fromx, fromy);
     context.bezierCurveTo(fromx, fromy + 20, tox, toy + 20, tox, toy);
-    context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
-    context.moveTo(tox, toy);
-    context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+    //context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+    //context.moveTo(tox, toy);
+    //context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
     context.stroke();
 }
 
@@ -211,16 +211,26 @@ FSAnimator.prototype.select_inode = function (inodenum, inode){
 
     if (num_blocks) {
         this.ctx.fillText("Indirect: " + Array.from(inode.indirect).join(" "), w_offset, h_offset);
+        var ind_x = this.inode_width * this.fs.num_inodes + this.block_width * inode.indirect + this.block_width/2;
+        var ind_y = 1;
         canvas_arrow(
             this.ctx,
             w_offset + font_width * "Indirect: 0".length,
             h_offset - 10,
-            this.inode_width * this.fs.num_inodes + this.block_width * inode.indirect,
-            5);
+            ind_x,
+            ind_y);
         h_offset += 20;
         var disk_offset = inode.indirect[0] * this.fs.block_size;
         var indirect_array = new Uint8Array(this.fs.disk, disk_offset, num_blocks);
         var indirect_array_str = indirect_array.join(" ");
+        for (block_idx of indirect_array) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(ind_x, ind_y);
+            var to_x = this.inode_width * this.fs.num_inodes + this.block_width * block_idx + this.block_width/2;
+            var to_y = ind_y;
+            this.ctx.bezierCurveTo(ind_x, ind_y + 20, to_x, to_y + 20, to_x, to_y);
+            this.ctx.stroke();
+        }
 
         this.ctx.fillText(indirect_array_str, w_offset + font_width * "Indirect: ".length, h_offset);
         h_offset += 20;
