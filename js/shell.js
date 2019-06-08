@@ -84,7 +84,7 @@ const possible_commands = [
 
 var coreutils_promises = null;
 
-// command syntax: [args] (> file(+offset))
+// command syntax: [args] (> file)
 function Command(input, stdout_path) {
     this.input = input;
 
@@ -105,6 +105,9 @@ function Command(input, stdout_path) {
     this.arguments = parts;
 }
 
+/**
+ * ShellFS will provide a filesystem interface to reading and writing input/output and errors.
+ */
 function ShellFS(shell) {
     this.shell = shell;
 };
@@ -123,8 +126,11 @@ ShellFS.prototype.open = async function(path, mode) {
     }
     return "ENOENT";
 };
+
+// Replace default "EIMPL" error
 ShellFS.prototype.close = fd => {};
 
+// Return 0 for any IS_TTY requests
 ShellFS.prototype.ioctl = async function (fd, request, obj){
     if (request != IOCTL_IS_TTY)
         return "EIMPL";
@@ -137,12 +143,16 @@ ShellFS.prototype.read = async function (file, buffer){
     var bytes_to_read = buffer.length;
     var bytes_read = 0;
     while (!this.shell.stdin_closed && bytes_read < bytes_to_read) {
+        // Oh no, there is no more input, need to block...
         while (!this.shell.stdin.length && !this.shell.stdin_closed) {
             var shell = this.shell;
+
+            // Let the shell know that there is a blocked reader
             var p = new Promise(resolve => { shell.reader = resolve; });
             await p;
         }
 
+        // Check if we were unblocked because stdin closed
         if (this.shell.stdin_closed)
             break;
 
@@ -163,7 +173,9 @@ ShellFS.prototype.write = function (file, buffer) {
 };
 
 
-// This shell models a single process environment
+/**
+ * Shell models a single process operating system, a GUI, and a userspace shell.
+ */
 function Shell(fs, parent) {
     this.filesystem = fs;
     this.current_dir = "/";
@@ -172,8 +184,7 @@ function Shell(fs, parent) {
     this.history = [];
     this.history_index = -1;
 
-    // if stdin_buffer is empty a reader can place a resolve here and wait for
-    // it to be resolved
+    // if stdin_buffer is empty a reader can place a resolve here and wait for it to be resolved
     this.stdin_buffer = [];
     this.stdin = [];
     this.stdin_closed = false;
@@ -184,13 +195,14 @@ function Shell(fs, parent) {
     this.setup_container_and_output(parent);
 }
 
+/**
+ * set up required DOM elements to display the shell
+ */
 Shell.prototype.setup_container_and_output = function(parent) {
     this.container = document.createElement("div");
     this.container.tabIndex = "0";
     this.container.style.maxHeight = "250px";
     this.container.style.overflow = "auto";
-    //this.container.style.height = "20%";
-    //this.container.style.overflow = "scroll";
 
     this.output = document.createElement("pre");
     this.setup_container_event_listeners();
@@ -201,6 +213,7 @@ Shell.prototype.setup_container_and_output = function(parent) {
         this.parent = parent;
     }
 
+    // Set up event that will allow other elements to wait until the shell has started processing input
     var that = this;
     this.initialized = new Promise(r => { that._init_resolver = r; });
 }
@@ -252,6 +265,9 @@ Shell.prototype.remove_container_event_listeners = function () {
         this.container.removeEventListener("paste", this.paste_listener, false);
 };
 
+/**
+ * Create GUI elements to get input
+ */
 Shell.prototype.create_extended_input = function (content) {
     var that = this;
     content = content || "";
@@ -278,8 +294,6 @@ Shell.prototype.create_extended_input = function (content) {
         that.extended_active.resolve();
     };
 
-
-
     if (this.parent) {
         this.parent.appendChild(this.extended_active.input_box);
         this.parent.appendChild(this.extended_active.confirm_button);
@@ -289,6 +303,9 @@ Shell.prototype.create_extended_input = function (content) {
     }
 };
 
+/**
+ * Block until output from GUI elements is availible then remove elements.
+ */
 Shell.prototype.get_extended_output_and_cleanup = async function () {
     if (!this.extended_active)
         return;
@@ -305,6 +322,10 @@ Shell.prototype.get_extended_output_and_cleanup = async function () {
     return output;
 };
 
+/**
+ * Perform initialization that requires filesystem/blocking operations
+ * This can't be completed by the time the constructor returns.
+ */
 Shell.prototype._init = async function (base_url) {
     this.shellfs_root = "/.shellfs";
     this.shellfs = new ShellFS(this);
@@ -340,6 +361,9 @@ Shell.prototype._init = async function (base_url) {
     this._init_resolver();
 }
 
+/**
+ * Process one character of input to be added to the stdin stream
+ */
 Shell.prototype.process_input = function (key, ctrlkey) {
     this.scroll_container();
 
@@ -418,6 +442,9 @@ Shell.prototype.scroll_container = async function () {
         this.container.scrollTop = this.container.scrollHeight;
 }
 
+/**
+ * Read and execute commands from stdin
+ */
 Shell.prototype.main = async function (base_url) {
     await this._init(base_url);
     while (true) {
@@ -442,12 +469,16 @@ Shell.prototype.main = async function (base_url) {
     }
 }
 
+/**
+ * Parse and run a command
+ */
 Shell.prototype.run_command = async function (input) {
     var command = new Command(input, this.output_path);
 
     if (!command.arguments[0])
         return;
 
+    // Prepare the output stream
     var command_output = this.expand_path(command.output)
     var open_flags = O_WRONLY | O_CREAT;
     if (command.append_output)
@@ -463,10 +494,15 @@ Shell.prototype.run_command = async function (input) {
         if (command.arguments[0] == possible_commands[i].name)
             return this['handle_' + possible_commands[i].name](command);
     }
+
+    // Try to execute program as if it's own disk
     command.arguments.unshift("exec");
     return this['handle_exec'](command);
 }
 
+/**
+ * Join two paths with "/" if necessary"
+ */
 Shell.prototype.path_join = function(path1, path2) {
     if (path1.endsWith("/") && path2.startsWith("/"))
         return path1 + path2.slice(1);
@@ -478,6 +514,9 @@ Shell.prototype.path_join = function(path1, path2) {
 };
 
 
+/**
+ * Expand the current path according to current working directory and resolve all '.' and '..'
+ */
 Shell.prototype.expand_path = function(path) {
     var curr_dir = this.current_dir.split("/");
     var parts = path.split("/");
@@ -507,10 +546,11 @@ Shell.prototype.expand_path = function(path) {
     return expanded_path;
 }
 
+/**
+ * Print and return an error
+ */
 Shell.prototype._return_error = async function(error) {
     await this.filesystem.write(this.stderr, str_to_bytes(
             "Error: " + error + "\n"));
     return error;
 };
-
-
