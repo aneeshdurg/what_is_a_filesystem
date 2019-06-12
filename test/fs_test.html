@@ -1,12 +1,98 @@
-<script src="/js/test.js"></script>
-<script src="/js/defs.js"></script>
-<script src="/js/fs_helper.js"></script>
-<script src="/js/fs.js"></script>
-<script src="/js/myfs.js"></script>
-<script src="/js/lfs.js"></script>
+<script src="../js/test.js"></script>
+<script src="../js/defs.js"></script>
+<script src="../js/fs_helper.js"></script>
+<script src="../js/fs.js"></script>
+<script src="../js/myfs.js"></script>
+<script src="../js/lfs.js"></script>
 <script>
 
 async function test_layered_fns() {
+  function TestFS() {};
+  inherit(TestFS, DefaultFS);
+  function _gen_TestFS_attr(attr) {
+    return "TestFS.prototype." + attr + "= function() { " +
+      "this." + attr + "_called = arguments;" +
+      "};";
+  }
+
+  var ignore = new Set(["constructor", "mount", "umount", "seek"]);
+  var callbacks = Object.getOwnPropertyNames(DefaultFS.prototype).filter(x => !ignore.has(x));
+  for (name of callbacks) {
+    if (name === "constructor")
+      continue;
+    eval(_gen_TestFS_attr(name));
+  }
+  console.log(TestFS);
+
+  var testfs = new TestFS();
+  var lfs = new LayeredFilesystem();
+  await lfs.mkdir("/test", 0o755);
+  await lfs.mount("/test", testfs);
+
+  lfs.readdir("/test");
+  assert(testfs.readdir_called && testfs.readdir_called[0] == "/", testfs);
+
+  lfs.stat("/test/newfile");
+  assert(testfs.stat_called && testfs.stat_called[0] == "/newfile");
+
+  lfs.unlink("/test/newfile");
+  assert(testfs.unlink_called && testfs.unlink_called[0] == "/newfile");
+
+  lfs.create("/test/newfile", 0);
+  assert(
+    testfs.create_called &&
+    testfs.create_called[0] == "/newfile" &&
+    testfs.create_called[1] == 0);
+
+  lfs.truncate("/test/newfile", 0);
+  assert(testfs.truncate_called && testfs.truncate_called[0] == "/newfile");
+
+  lfs.chmod("/test", 0o777);
+  assert(
+    testfs.chmod_called &&
+    testfs.chmod_called[0] == "/" &&
+    testfs.chmod_called[1] == 0o777);
+
+  lfs.link("/test/newfile", "/test/newfile1");
+  assert(
+    testfs.link_called &&
+    testfs.link_called[0] == "/newfile" &&
+    testfs.link_called[1] == "/newfile1")
+
+  lfs.mkdir("/test/newdir")
+  assert(testfs.mkdir_called && testfs.mkdir_called[0] == "/newdir");
+
+  lfs.open("/test", O_RDONLY);
+  assert(testfs.open_called && testfs.open_called[0] == "/");
+
+  var fd = new FileDescriptor(testfs, "", 0, null, 0);
+  lfs.ioctl(fd, 0, null);
+  assert(
+    testfs.ioctl_called &&
+    testfs.ioctl_called[0] == fd &&
+    testfs.ioctl_called[1] == 0 &&
+    testfs.ioctl_called[2] == null);
+
+
+  lfs.close(fd)
+  assert(testfs.close_called && testfs.close_called[0] == fd);
+
+  var data = new Uint8Array([1, 2, 3, 4, 5]);
+  lfs.write(fd, data);
+  assert(
+    testfs.write_called &&
+    testfs.write_called[0] == fd &&
+    testfs.write_called[1] == data);
+
+  lfs.read(fd, data);
+  assert(
+    testfs.read_called &&
+    testfs.read_called[0] == fd &&
+    testfs.read_called[1] == data)
+  return lfs;
+}
+
+async function test_layered_mounts() {
     var lfs = new LayeredFilesystem();
     var tmp = new MyFS();
     await lfs.mkdir("/tmp", 0o777);

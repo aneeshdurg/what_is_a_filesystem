@@ -102,7 +102,9 @@ function __gen_LayeredFilesystem_callback_3_file(name) {
         "  return fd.fs." + name + "(fd, arg2, arg3);" +
         "};");
 }
-__gen_LayeredFilesystem_callback_1("close");
+
+LayeredFilesystem.prototype.close = async function (fd) { return fd.fs.close(fd); };
+
 __gen_LayeredFilesystem_callback_1("readdir");
 __gen_LayeredFilesystem_callback_1("stat");
 __gen_LayeredFilesystem_callback_1("unlink");
