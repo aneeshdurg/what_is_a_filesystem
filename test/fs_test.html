@@ -7,23 +7,6 @@
 <script>
 
 async function test_layered_fns() {
-  function TestFS() {};
-  inherit(TestFS, DefaultFS);
-  function _gen_TestFS_attr(attr) {
-    return "TestFS.prototype." + attr + "= function() { " +
-      "this." + attr + "_called = arguments;" +
-      "};";
-  }
-
-  var ignore = new Set(["constructor", "mount", "umount", "seek"]);
-  var callbacks = Object.getOwnPropertyNames(DefaultFS.prototype).filter(x => !ignore.has(x));
-  for (name of callbacks) {
-    if (name === "constructor")
-      continue;
-    eval(_gen_TestFS_attr(name));
-  }
-  console.log(TestFS);
-
   var testfs = new TestFS();
   var lfs = new LayeredFilesystem();
   await lfs.mkdir("/test", 0o755);

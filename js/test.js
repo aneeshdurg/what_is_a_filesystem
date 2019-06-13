@@ -11,6 +11,12 @@ function assert(cond, msg) {
     }
 }
 
+function assert_test_case(testcase) {
+  assert(
+    testcase.actual === testcase.expected,
+    testcase.actual + " != " + testcase.expected);
+}
+
 var _test_result = null;
 async function run_test(test) {
     _test_result = null;
@@ -34,7 +40,25 @@ function gen_run_test(name) {
     return () => { run_test(window[name]); };
 }
 
+function TestFS() {};
+function TestFSSetup() {
+    inherit(TestFS, DefaultFS);
+    function _gen_TestFS_attr(attr) {
+        return "TestFS.prototype." + attr + "= function() { " +
+            "this." + attr + "_called = arguments;" +
+            "};";
+    }
+    var ignore = new Set(["constructor", "mount", "umount", "seek"]);
+    var callbacks = Object.getOwnPropertyNames(DefaultFS.prototype).filter(x => !ignore.has(x));
+    for (name of callbacks) {
+        if (name === "constructor")
+            continue;
+        eval(_gen_TestFS_attr(name));
+    }
+}
+
 function main() {
+    TestFSSetup();
     var testnames =
         Object.getOwnPropertyNames(window).filter(
             (x) => x.startsWith("test_"));
