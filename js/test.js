@@ -11,15 +11,16 @@ function assert(cond, msg) {
     }
 }
 
+var _test_result = null;
 async function run_test(test) {
-    var return_val = null;
+    _test_result = null;
     try {
-        return_val = await test();
+        _test_result = await test();
     } catch (err) {
         console.log(err);
     }
 
-    if (return_val)
+    if (_test_result)
         document.body.appendChild(
             document.createTextNode(test.name + ": Success!"));
     else

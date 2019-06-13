@@ -1,0 +1,66 @@
+<script src="../js/test.js"></script>
+<script src="../js/defs.js"></script>
+<script src="../js/fs_helper.js"></script>
+<script src="../js/fs.js"></script>
+<script src="../js/myfs.js"></script>
+<script src="../js/lfs.js"></script>
+<script src="../js/shell.js"></script>
+<script>
+async function test_shellfs_blocking_read() {
+  // expected output of read
+  const expected_str = "1234567890";
+  var expected_idx = 0;
+  // reasons for why the test is over
+  const SUCCESS_STR = "SUCCESS";
+  const TIMEOUT_STR = "TIMEOUT";
+  // loose upper bound on total time needed for detecting timeout
+  const TOTAL_TIME = 11 * 100;
+
+  // Setup shell without UI
+  var shell = new Shell(new LayeredFilesystem(), null);
+  shell.main("..");
+  await shell.initialized;
+
+  var fd = await shell.filesystem.open("/.shellfs/stdin", O_RDONLY);
+  assert(typeof(fd) !== 'string', fd);
+
+  var buffer = new Uint8Array(new ArrayBuffer(10));
+
+  // p is resolved when the test is over, either due to success or timeout
+  var resolve = null;
+  var p = new Promise(r => { resolve = r; });
+
+  // output tells us why the test was resolved
+  var output = null;
+  function do_resolve(result) {
+    if (!output) {
+      resolve();
+      output = result;
+    }
+  }
+
+  // Block on the read
+  (async function () {
+    await shell.filesystem.read(fd, buffer);
+    do_resolve(SUCCESS_STR);
+  })();
+
+  // asynchronously pass in input
+  (function on_timeout() {
+    shell.process_input(expected_str[expected_idx++], false);
+    if (expected_idx < expected_str.length)
+      setTimeout(on_timeout, 100);
+    else
+      shell.process_input("Enter", false); // flush input
+  })();
+
+  // resolve on timeout
+  setTimeout(() => { do_resolve("TIMEOUT"); }, TOTAL_TIME);
+
+  // wait for test to complete
+  await p;
+  assert(output === SUCCESS_STR, output);
+  assert(bytes_to_str(buffer) === expected_str, bytes_to_str(buffer));
+  return shell;
+}
+</script>

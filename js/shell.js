@@ -1,7 +1,7 @@
 const possible_commands = [
     {
         name: "cat",
-        description: "Concatenate files and input streams " + 
+        description: "Concatenate files and input streams " +
             "(can also be used to dump content to stdout or write stdin to files)",
     },
     {
