@@ -1,3 +1,31 @@
+// https://stackoverflow.com/a/13819253/5803067
+var isMobile = {
+    Android: function() {
+        return navigator.userAgent.match(/Android/i);
+    },
+    BlackBerry: function() {
+        return navigator.userAgent.match(/BlackBerry/i);
+    },
+    iOS: function() {
+        return navigator.userAgent.match(/iPhone|iPad|iPod/i);
+    },
+    Opera: function() {
+        return navigator.userAgent.match(/Opera Mini/i);
+    },
+    Windows: function() {
+        return navigator.userAgent.match(/IEMobile/i) || navigator.userAgent.match(/WPDesktop/i);
+    },
+    any: function() {
+        return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
+    }
+};
+
+function stop_event(e) {
+    e.stopPropagation();
+    e.preventDefault();
+}
+
+
 const possible_commands = [
     {
         name: "cat",
@@ -218,51 +246,123 @@ Shell.prototype.setup_container_and_output = function(parent) {
     this.initialized = new Promise(r => { that._init_resolver = r; });
 }
 
-Shell.prototype.setup_container_event_listeners = function () {
-    function stop_event(e) {
-        e.stopPropagation();
-        e.preventDefault();
-    }
+Shell.prototype.setup_mobile_input = function() {
+    if (this.mobile)
+        return;
+
     var that = this;
 
-    this.click_listner = function(e) { that.container.focus(); };
+    this.mobile = {};
+    that.mobile.disable_events = false;
+
+    this.mobile.container = document.createElement("div");
+    this.mobile.container.innerHTML = "Mobile input:<br>";
+
+    this.mobile.input = document.createElement("input");
+
+    this.mobile.send = document.createElement("button");
+    this.mobile.send.innerHTML = "Send stdin";
+    this.mobile.send.onclick = function(event) {
+        if (that.mobile.disable_events)
+            return;
+        var text = that.mobile.input.value;
+        for (var c of text)
+            that.process_input(c, false);
+        that.process_input("Enter", false);
+        that.mobile.input.value = "";
+        that.mobile.input.focus();
+    }
+
+    this.mobile.close = document.createElement("button");
+    this.mobile.close.innerHTML = "Close stdin";
+    this.mobile.close.onclick = function(event) {
+        if (that.mobile.disable_events)
+            return;
+        that.process_input("d", true);
+    }
+
+    this.mobile.container.appendChild(this.mobile.input);
+    this.mobile.container.appendChild(this.mobile.send);
+    this.mobile.container.appendChild(this.mobile.close);
+
+    this.container.appendChild(this.mobile.container);
+}
+
+Shell.prototype.destroy_mobile_input = function() {
+    if (!this.mobile)
+        return;
+    this.mobile.input.remove();
+    this.mobile.close.remove();
+    this.mobile.container.remove();
+    delete this.mobile;
+}
+
+
+Shell.prototype.setup_container_event_listeners = function () {
+    var that = this;
+
+    this.click_listner = function(e) {
+        console.log(Boolean(that.mobile));
+        if (isMobile.any()) {
+            if(!that.mobile) {
+                that.setup_mobile_input();
+            }
+        } else {
+            console.log("focusing");
+            that.container.focus();
+        }
+    };
     this.container.addEventListener("click", this.click_listner, false);
 
-    this.container.addEventListener("keyup", stop_event);
+    this.container.addEventListener("focusout", function (e) {
+      if (isMobile.any()) {
+          //that.destroy_mobile_input();
+      }
+    }, false);
 
-    this.keydown_listener = function(e) {
-        if(that.process_input(e.key, e.ctrlKey))
-            stop_event(e);
-    };
-    this.container.addEventListener("keydown", this.keydown_listener, false);
+    if (!isMobile.any()) {
+        this.container.addEventListener("keyup", stop_event);
 
-    this.paste_listner = function(event){
-        var text = event.clipboardData.getData('text');
-        var lines = text.split("\n");
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            for (var c of line) {
-                that.process_input(c, false);
+        this.keydown_listener = function(e) {
+            if(that.process_input(e.key, e.ctrlKey))
+                stop_event(e);
+        };
+        this.container.addEventListener("keydown", this.keydown_listener, false);
+
+        this.paste_listner = function(event){
+            var text = event.clipboardData.getData('text');
+            var lines = text.split("\n");
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                for (var c of line) {
+                    that.process_input(c, false);
+                }
+                if (i != (lines.length - 1))
+                    that.process_input("Enter", false);
             }
-            if (i != (lines.length - 1))
-                that.process_input("Enter", false);
         }
+        this.container.addEventListener("paste", this.paste_listner, false);
+    } else if (this.mobile) {
+        this.mobile.disable_events = false;
     }
-    this.container.addEventListener("paste", this.paste_listner, false);
 }
 
 Shell.prototype.remove_container_event_listeners = function () {
     if (this.click_listner)
         this.container.removeEventListener("click", this.click_listner, false);
 
-    if (this.keyup_listener)
-        this.container.removeEventListener("keyup", this.keyup_listener);
+    if (!isMobile.any()) {
+        if (this.keyup_listener)
+            this.container.removeEventListener("keyup", this.keyup_listener);
 
-    if (this.keydown_listener)
-        this.container.removeEventListener("keydown", this.keydown_listener, false);
+        if (this.keydown_listener)
+            this.container.removeEventListener("keydown", this.keydown_listener, false);
 
-    if (this.paste_listener)
-        this.container.removeEventListener("paste", this.paste_listener, false);
+        if (this.paste_listener)
+            this.container.removeEventListener("paste", this.paste_listener, false);
+    } else if (this.mobile) {
+        this.mobile.disable_events = true;
+    }
 };
 
 /**
