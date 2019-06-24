@@ -194,9 +194,8 @@ ShellFS.prototype.read = async function (file, buffer){
 
 ShellFS.prototype.write = function (file, buffer) {
     var output_as_str = String.fromCharCode.apply(null, buffer);
-    this.shell.output.innerText += output_as_str;
+    this.shell.output.append(output_as_str);
 
-    this.shell.scroll_container();
     return buffer.length;
 };
 
@@ -227,12 +226,19 @@ function Shell(fs, parent) {
  * set up required DOM elements to display the shell
  */
 Shell.prototype.setup_container_and_output = function(parent) {
+    var that = this;
     this.container = document.createElement("div");
     this.container.tabIndex = "0";
     this.container.style.maxHeight = "250px";
-    this.container.style.overflow = "auto";
 
-    this.output = document.createElement("pre");
+    this.output = document.createElement("textarea");
+    this.output.className = "terminal";
+    this.output.spellcheck = false;
+    this.output.append = function(text) {
+        that.output.value += text;
+        that.output.scrollTop = that.output.scrollHeight;
+    }
+
     this.setup_container_event_listeners();
     this.container.appendChild(this.output);
 
@@ -242,58 +248,32 @@ Shell.prototype.setup_container_and_output = function(parent) {
     }
 
     // Set up event that will allow other elements to wait until the shell has started processing input
-    var that = this;
     this.initialized = new Promise(r => { that._init_resolver = r; });
 }
 
 Shell.prototype.setup_mobile_input = function() {
-    if (this.mobile)
+    if (this.mobile || this.disable_events)
         return;
 
     var that = this;
 
     this.mobile = {};
-    that.mobile.disable_events = false;
-
-    this.mobile.container = document.createElement("div");
-    this.mobile.container.innerHTML = "Mobile input:<br>";
-
-    this.mobile.input = document.createElement("input");
-
-    this.mobile.send = document.createElement("button");
-    this.mobile.send.innerHTML = "Send stdin";
-    this.mobile.send.onclick = function(event) {
-        if (that.mobile.disable_events)
-            return;
-        var text = that.mobile.input.value;
-        for (var c of text)
-            that.process_input(c, false);
-        that.process_input("Enter", false);
-        that.mobile.input.value = "";
-        that.mobile.input.focus();
-    }
 
     this.mobile.close = document.createElement("button");
     this.mobile.close.innerHTML = "Close stdin";
     this.mobile.close.onclick = function(event) {
-        if (that.mobile.disable_events)
-            return;
-        that.process_input("d", true);
-    }
+      that.process_input("d", true);
+      stop_event(event);
+    };
 
-    this.mobile.container.appendChild(this.mobile.input);
-    this.mobile.container.appendChild(this.mobile.send);
-    this.mobile.container.appendChild(this.mobile.close);
-
-    this.container.appendChild(this.mobile.container);
+    this.container.appendChild(this.mobile.close);
 }
 
 Shell.prototype.destroy_mobile_input = function() {
     if (!this.mobile)
         return;
-    this.mobile.input.remove();
+
     this.mobile.close.remove();
-    this.mobile.container.remove();
     delete this.mobile;
 }
 
@@ -307,9 +287,6 @@ Shell.prototype.setup_container_event_listeners = function () {
             if(!that.mobile) {
                 that.setup_mobile_input();
             }
-        } else {
-            console.log("focusing");
-            that.container.focus();
         }
     };
     this.container.addEventListener("click", this.click_listner, false);
@@ -320,49 +297,57 @@ Shell.prototype.setup_container_event_listeners = function () {
       }
     }, false);
 
-    if (!isMobile.any()) {
-        this.container.addEventListener("keyup", stop_event);
+    this.container.addEventListener("keyup", stop_event);
 
-        this.keydown_listener = function(e) {
-            if(that.process_input(e.key, e.ctrlKey))
-                stop_event(e);
-        };
-        this.container.addEventListener("keydown", this.keydown_listener, false);
+    this.keydown_listener = function(e) {
+        if(that.process_input(e.key, e.ctrlKey))
+            stop_event(e);
+    };
+    this.container.addEventListener("keydown", this.keydown_listener, false);
 
-        this.paste_listner = function(event){
-            var text = event.clipboardData.getData('text');
-            var lines = text.split("\n");
-            for (var i = 0; i < lines.length; i++) {
-                var line = lines[i];
-                for (var c of line) {
-                    that.process_input(c, false);
-                }
-                if (i != (lines.length - 1))
-                    that.process_input("Enter", false);
+    this.paste_listner = function(event){
+        var text = event.clipboardData.getData('text');
+        var lines = text.split("\n");
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            for (var c of line) {
+                that.process_input(c, false);
             }
+            if (i != (lines.length - 1))
+                that.process_input("Enter", false);
         }
-        this.container.addEventListener("paste", this.paste_listner, false);
-    } else if (this.mobile) {
-        this.mobile.disable_events = false;
+
+        stop_event(event);
     }
+    this.container.addEventListener("paste", this.paste_listner, false);
+    this.disable_events = false;
 }
 
 Shell.prototype.remove_container_event_listeners = function () {
-    if (this.click_listner)
+    var that = this;
+    if (this.click_listner) {
         this.container.removeEventListener("click", this.click_listner, false);
-
-    if (!isMobile.any()) {
-        if (this.keyup_listener)
-            this.container.removeEventListener("keyup", this.keyup_listener);
-
-        if (this.keydown_listener)
-            this.container.removeEventListener("keydown", this.keydown_listener, false);
-
-        if (this.paste_listener)
-            this.container.removeEventListener("paste", this.paste_listener, false);
-    } else if (this.mobile) {
-        this.mobile.disable_events = true;
+        this.container.addEventListener("click", function(e) {
+            that.container.blur();
+            document.activeElement.blur();
+        }, false);
     }
+
+    if (this.keyup_listener) {
+        this.container.removeEventListener("keyup", this.keyup_listener);
+        this.container.addEventListener("keyup", stop_event);
+    }
+
+    if (this.keydown_listener) {
+        this.container.removeEventListener("keydown", this.keydown_listener, false);
+        this.container.addEventListener("keydown", stop_event, false);
+    }
+
+    if (this.paste_listener) {
+        this.container.removeEventListener("paste", this.paste_listener, false);
+        this.container.addEventListener("paste", stop_event, false);
+    }
+    this.disable_events = true;
 };
 
 /**
@@ -465,8 +450,6 @@ Shell.prototype._init = async function (base_url) {
  * Process one character of input to be added to the stdin stream
  */
 Shell.prototype.process_input = function (key, ctrlkey) {
-    this.scroll_container();
-
     var flush = false
     var to_append = null;
     if (key.length == 1) {
@@ -487,25 +470,25 @@ Shell.prototype.process_input = function (key, ctrlkey) {
     } else if (key === "Backspace") {
         if (this.stdin_buffer.length) {
             this.stdin_buffer.pop();
-            if (this.output.innerText.length) {
-                this.output.innerText = this.output.innerText.slice(0, -1);
+            if (this.output.value.length) {
+                this.output.value = this.output.value.slice(0, -1);
             }
         }
     } else if (key === "ArrowUp") {
         if (this.history.length && this.history_index >= 0) {
-            if (this.stdin_buffer.length && this.output.innerText.length) {
-                this.output.innerText = this.output.innerText.slice(0, -1 * this.stdin_buffer.length);
+            if (this.stdin_buffer.length && this.output.value.length) {
+                this.output.value = this.output.value.slice(0, -1 * this.stdin_buffer.length);
             }
 
             var history_input = this.history[this.history_index].trim();
             this.stdin_buffer = Array.from(history_input);
-            this.output.innerText += history_input;
+            this.output.append(history_input);
             this.history_index -= 1;
         }
     } else if (key === "ArrowDown") {
         if (this.history.length && this.history_index < this.history.length) {
-            if (this.stdin_buffer.length && this.output.innerText.length) {
-                this.output.innerText = this.output.innerText.slice(0, -1 * this.stdin_buffer.length);
+            if (this.stdin_buffer.length && this.output.value.length) {
+                this.output.value = this.output.value.slice(0, -1 * this.stdin_buffer.length);
             }
 
             if (this.history_index + 1 == this.history.length) {
@@ -513,7 +496,7 @@ Shell.prototype.process_input = function (key, ctrlkey) {
             } else {
                 var history_input = this.history[this.history_index + 1].trim();
                 this.stdin_buffer = Array.from(history_input);
-                this.output.innerText += history_input;
+                this.output.append(history_input);
                 this.history_index += 1;
             }
         }
@@ -527,7 +510,7 @@ Shell.prototype.process_input = function (key, ctrlkey) {
             this.stdin = this.stdin.concat(this.stdin_buffer);
             this.stdin_buffer = [];
         }
-        this.output.innerText += to_append;
+        this.output.append(to_append);
     }
 
     if (this.reader) {
@@ -538,18 +521,13 @@ Shell.prototype.process_input = function (key, ctrlkey) {
     return true;
 }
 
-Shell.prototype.scroll_container = async function () {
-        this.container.scrollTop = this.container.scrollHeight;
-}
-
 /**
  * Read and execute commands from stdin
  */
 Shell.prototype.main = async function (base_url) {
     await this._init(base_url);
     while (true) {
-        this.output.innerText += this.prompt(this);
-        this.scroll_container();
+        this.output.append(this.prompt(this));
 
         var command = "";
         var file = await this.filesystem.open(this.input_path);

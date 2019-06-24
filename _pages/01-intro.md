@@ -33,7 +33,7 @@ You can try it out below:
 <br>
 
 Try clicking on the shell and typing `echo hello world!` to run your first command!
-If you're on mobile, a seperate textbox will appear with a button that will send your input to the shell.
+(Note that some commands don't fully work on mobile)
 
 Through the course of this book, you will be able to interact with filesystems by running various programs inside this shell.
 Note that any changes you make to the filesystem will be gone when you reload the page, or naviagte to the next page.

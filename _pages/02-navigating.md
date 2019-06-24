@@ -78,6 +78,8 @@ Normally `cat` will output the contents of all files passed in as arguments, but
 
 Let's input some content into the file we created earlier.
 To do this run `cat > newfile`.
+Note that redirecting output does not work correctly on mobile.
+To create/edit files on mobile use `edit` instead.
 Since `cat` will read from stdin forever, close stdin with `ctrl + d` when you are done.
 Note that lines are only actually sent to stdin when you press `Enter`.
 
