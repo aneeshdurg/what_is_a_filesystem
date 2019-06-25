@@ -16,6 +16,7 @@ var isMobile = {
         return navigator.userAgent.match(/IEMobile/i) || navigator.userAgent.match(/WPDesktop/i);
     },
     any: function() {
+        return true;
         return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
     }
 };
@@ -231,17 +232,36 @@ Shell.prototype.setup_container_and_output = function(parent) {
     this.container.tabIndex = "0";
     this.container.style.maxHeight = "250px";
 
-    this.output = document.createElement("textarea");
-    this.output.className = "terminal";
-    this.output.spellcheck = false;
-    this.output.append = function(text) {
-        that.output.value += text;
-        that.output.scrollTop = that.output.scrollHeight;
+        this.output = document.createElement("textarea");
+        this.output.className = "terminal";
+
+        this.output.autocomplete = "off";
+        this.output.autocorrect = "off";
+        this.output.autocapitalize = "off";
+        this.output.spellcheck = false;
+
+        this.output.append = function(text) {
+            that.output.value += text;
+            that.output.scrollTop = that.output.scrollHeight;
+        }
+
+        this.output.get = function() {
+            return that.output.value;
+        }
+
+        this.output.set = function(text) {
+            that.output.value = text;
+            that.output.scrollTop = that.output.scrollHeight;
+        }
+
+
+    if (!isMobile.any()) {
+        this.setup_container_event_listeners();
+    } else {
+        this.mobile_setup_container_event_listeners();
     }
 
-    this.setup_container_event_listeners();
     this.container.appendChild(this.output);
-
     if (parent) {
         parent.appendChild(this.container);
         this.parent = parent;
@@ -259,6 +279,19 @@ Shell.prototype.setup_mobile_input = function() {
 
     this.mobile = {};
 
+    this.mobile.input = document.createElement("input");
+
+    this.mobile.send = document.createElement("send");
+    this.mobile.send.innerHTML = "Send stdin";
+    this.mobile.send.onclick = function(event) {
+        var text = that.mobile.input.value;
+        that.mobile.input.value = "";
+        for (var c of text)
+            that.process_input(c, false);
+
+        that.process_input("Enter", false);
+    };
+
     this.mobile.close = document.createElement("button");
     this.mobile.close.innerHTML = "Close stdin";
     this.mobile.close.onclick = function(event) {
@@ -266,7 +299,7 @@ Shell.prototype.setup_mobile_input = function() {
       stop_event(event);
     };
 
-    this.container.appendChild(this.mobile.close);
+    this.output.container.appendChild(this.mobile.close);
 }
 
 Shell.prototype.destroy_mobile_input = function() {
@@ -277,6 +310,56 @@ Shell.prototype.destroy_mobile_input = function() {
     delete this.mobile;
 }
 
+var idk = null;
+Shell.prototype.mobile_setup_container_event_listeners = function () {
+    var that = this;
+    console.log("Setting up mobile");
+
+    this.old_len = null;
+    this.keydown_listener = function(e) {
+        that.old_value = that.output.get();
+        if (that.old_len == null) {
+            that.old_len = that.output.get().length;
+        }
+
+        if (that.process_input(e.key, e.ctrlKey)) {
+            return stop_event(e);
+        } else if (e.ctrlKey) {
+            return;
+        }
+
+        if (that.output.selectionStart < that.old_len) {
+            that.output.selectionStart = that.output.get().length;
+            that.dispatchEvent(e);
+            return stop_event(e);
+        }
+    };
+    this.output.addEventListener("keydown", this.keydown_listener, false);
+
+    // TODO test on mobile
+    // TODO cleanup this, keydown_listener and process_input
+    // consider making them all methods on the class
+    this.input_listener = function (e) {
+        function restore() {
+            console.log("restoring '" + that.old_value + "'");
+            that.output.set(that.old_value);
+        }
+
+        idk = e;
+        if (that.output.selectionStart < that.old_len) {
+            return restore();
+        }
+
+        if (e.inputType.indexOf("delete") >= 0) {
+            if (that.output.get().length < that.old_len) {
+                return restore();
+            }
+        }
+    };
+    this.output.addEventListener("input", this.input_listener, false);
+
+    this.disable_events = false;
+}
 
 Shell.prototype.setup_container_event_listeners = function () {
     var that = this;
@@ -289,6 +372,7 @@ Shell.prototype.setup_container_event_listeners = function () {
             }
         }
     };
+
     this.container.addEventListener("click", this.click_listner, false);
 
     this.container.addEventListener("focusout", function (e) {
@@ -300,7 +384,7 @@ Shell.prototype.setup_container_event_listeners = function () {
     this.container.addEventListener("keyup", stop_event);
 
     this.keydown_listener = function(e) {
-        if(that.process_input(e.key, e.ctrlKey))
+        if (that.process_input(e.key, e.ctrlKey))
             stop_event(e);
     };
     this.container.addEventListener("keydown", this.keydown_listener, false);
@@ -446,79 +530,66 @@ Shell.prototype._init = async function (base_url) {
     this._init_resolver();
 }
 
-/**
- * Process one character of input to be added to the stdin stream
- */
-Shell.prototype.process_input = function (key, ctrlkey) {
-    var flush = false
-    var to_append = null;
-    if (key.length == 1) {
-        if (ctrlkey && key == 'd') {
-            this.stdin_closed = true;
-        } else if (ctrlkey) {
-            return false;
-        } else {
-            to_append = key;
-        }
-    } else if (key === "Enter") {
-        to_append = "\n";
-        flush = true;
-    } else if (key === "Tab") {
-        to_append = "\t";
-    } else if (key === "Escape") {
-        document.activeElement.blur();
-    } else if (key === "Backspace") {
-        if (this.stdin_buffer.length) {
-            this.stdin_buffer.pop();
-            if (this.output.value.length) {
-                this.output.value = this.output.value.slice(0, -1);
-            }
-        }
-    } else if (key === "ArrowUp") {
-        if (this.history.length && this.history_index >= 0) {
-            if (this.stdin_buffer.length && this.output.value.length) {
-                this.output.value = this.output.value.slice(0, -1 * this.stdin_buffer.length);
-            }
-
-            var history_input = this.history[this.history_index].trim();
-            this.stdin_buffer = Array.from(history_input);
-            this.output.append(history_input);
-            this.history_index -= 1;
-        }
-    } else if (key === "ArrowDown") {
-        if (this.history.length && this.history_index < this.history.length) {
-            if (this.stdin_buffer.length && this.output.value.length) {
-                this.output.value = this.output.value.slice(0, -1 * this.stdin_buffer.length);
-            }
-
-            if (this.history_index + 1 == this.history.length) {
-                this.stdin_buffer = [];
-            } else {
-                var history_input = this.history[this.history_index + 1].trim();
-                this.stdin_buffer = Array.from(history_input);
-                this.output.append(history_input);
-                this.history_index += 1;
-            }
-        }
-    } else {
-        return false;
-    }
-
-    if (to_append) {
-        this.stdin_buffer.push(to_append);
-        if (flush) {
-            this.stdin = this.stdin.concat(this.stdin_buffer);
-            this.stdin_buffer = [];
-        }
-        this.output.append(to_append);
-    }
-
+Shell.prototype.update_reader = function () {
     if (this.reader) {
         this.reader();
         this.reader = null;
     }
+}
 
-    return true;
+
+/**
+ * Process one character of input to be added to the stdin stream
+ */
+Shell.prototype.process_input = function (key, ctrlkey) {
+    if (ctrlkey && key == 'd') {
+        this.stdin_closed = true;
+        this.update_reader();
+        return true;
+    } else if(ctrlkey && key == 'v') {
+        if (this.output.selectionStart < this.old_len)
+            this.output.selectionStart = this.output.get().length;
+        return false;
+    } else if (ctrlkey) {
+        return false;
+    } else if (key === "Enter") {
+        var text = this.output.get().slice(this.old_len) + "\n";
+        this.stdin = this.stdin.concat(Array.from(text));
+        this.output.append("\n");
+        this.update_reader();
+        this.old_len = null;
+        return true;
+    } else if (key === "Escape") {
+        document.activeElement.blur();
+        return true;
+    } else if (key === "ArrowUp") {
+        if (this.history.length && this.history_index >= 0) {
+            if (this.output.get().length > this.old_len) {
+                this.output.set(this.output.get().slice(0, this.old_len));
+            }
+
+            var history_input = this.history[this.history_index].trim();
+            this.output.append(history_input);
+            this.history_index -= 1;
+        }
+        return true;
+    } else if (key === "ArrowDown") {
+        if (this.history.length && this.history_index < this.history.length) {
+            if (this.output.get().length > this.old_len) {
+                this.output.set(this.output.get().slice(0, this.old_len));
+            }
+
+            if (this.history_index + 1 == this.history.length) {
+            } else {
+                var history_input = this.history[this.history_index + 1].trim();
+                this.output.append(history_input);
+                this.history_index += 1;
+            }
+        }
+        return true;
+    }
+
+    return false;
 }
 
 /**
