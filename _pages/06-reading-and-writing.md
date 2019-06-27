@@ -37,12 +37,7 @@ async function create_file_from_remote(fs, remote, local) {
     }
 }
 function run_cat_on_shell(shell) {
-    var command = [
-        Array.from("cat /file"),
-        ["Enter"]];
-    for (i of command)
-        for (c of i)
-            shell.process_input(c, false);
+    shell.simulate_input("cat /file\n");
 }
 var action_1 = (async function() {
     await shell_1.initialized;

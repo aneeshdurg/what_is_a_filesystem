@@ -16,7 +16,6 @@ var isMobile = {
         return navigator.userAgent.match(/IEMobile/i) || navigator.userAgent.match(/WPDesktop/i);
     },
     any: function() {
-        return true;
         return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
     }
 };
@@ -232,36 +231,32 @@ Shell.prototype.setup_container_and_output = function(parent) {
     this.container.tabIndex = "0";
     this.container.style.maxHeight = "250px";
 
-        this.output = document.createElement("textarea");
-        this.output.className = "terminal";
+    this.output = document.createElement("textarea");
+    this.output.className = "terminal";
 
-        this.output.autocomplete = "off";
-        this.output.autocorrect = "off";
-        this.output.autocapitalize = "off";
-        this.output.spellcheck = false;
+    this.output.autocomplete = "off";
+    this.output.autocorrect = "off";
+    this.output.autocapitalize = "off";
+    this.output.spellcheck = false;
 
-        this.output.append = function(text) {
-            that.output.value += text;
-            that.output.scrollTop = that.output.scrollHeight;
-        }
-
-        this.output.get = function() {
-            return that.output.value;
-        }
-
-        this.output.set = function(text) {
-            that.output.value = text;
-            that.output.scrollTop = that.output.scrollHeight;
-        }
-
-
-    if (!isMobile.any()) {
-        this.setup_container_event_listeners();
-    } else {
-        this.mobile_setup_container_event_listeners();
+    this.output.append = function(text) {
+        that.output.value += text;
+        that.output.scrollTop = that.output.scrollHeight;
     }
 
+    this.output.get = function() {
+        return that.output.value;
+    }
+
+    this.output.set = function(text) {
+        that.output.value = text;
+        that.output.scrollTop = that.output.scrollHeight;
+    }
+
+
+    this.setup_container_event_listeners();
     this.container.appendChild(this.output);
+
     if (parent) {
         parent.appendChild(this.container);
         this.parent = parent;
@@ -279,19 +274,6 @@ Shell.prototype.setup_mobile_input = function() {
 
     this.mobile = {};
 
-    this.mobile.input = document.createElement("input");
-
-    this.mobile.send = document.createElement("send");
-    this.mobile.send.innerHTML = "Send stdin";
-    this.mobile.send.onclick = function(event) {
-        var text = that.mobile.input.value;
-        that.mobile.input.value = "";
-        for (var c of text)
-            that.process_input(c, false);
-
-        that.process_input("Enter", false);
-    };
-
     this.mobile.close = document.createElement("button");
     this.mobile.close.innerHTML = "Close stdin";
     this.mobile.close.onclick = function(event) {
@@ -299,7 +281,7 @@ Shell.prototype.setup_mobile_input = function() {
       stop_event(event);
     };
 
-    this.output.container.appendChild(this.mobile.close);
+    this.container.appendChild(this.mobile.close);
 }
 
 Shell.prototype.destroy_mobile_input = function() {
@@ -308,57 +290,6 @@ Shell.prototype.destroy_mobile_input = function() {
 
     this.mobile.close.remove();
     delete this.mobile;
-}
-
-var idk = null;
-Shell.prototype.mobile_setup_container_event_listeners = function () {
-    var that = this;
-    console.log("Setting up mobile");
-
-    this.old_len = null;
-    this.keydown_listener = function(e) {
-        that.old_value = that.output.get();
-        if (that.old_len == null) {
-            that.old_len = that.output.get().length;
-        }
-
-        if (that.process_input(e.key, e.ctrlKey)) {
-            return stop_event(e);
-        } else if (e.ctrlKey) {
-            return;
-        }
-
-        if (that.output.selectionStart < that.old_len) {
-            that.output.selectionStart = that.output.get().length;
-            that.dispatchEvent(e);
-            return stop_event(e);
-        }
-    };
-    this.output.addEventListener("keydown", this.keydown_listener, false);
-
-    // TODO test on mobile
-    // TODO cleanup this, keydown_listener and process_input
-    // consider making them all methods on the class
-    this.input_listener = function (e) {
-        function restore() {
-            console.log("restoring '" + that.old_value + "'");
-            that.output.set(that.old_value);
-        }
-
-        idk = e;
-        if (that.output.selectionStart < that.old_len) {
-            return restore();
-        }
-
-        if (e.inputType.indexOf("delete") >= 0) {
-            if (that.output.get().length < that.old_len) {
-                return restore();
-            }
-        }
-    };
-    this.output.addEventListener("input", this.input_listener, false);
-
-    this.disable_events = false;
 }
 
 Shell.prototype.setup_container_event_listeners = function () {
@@ -376,36 +307,63 @@ Shell.prototype.setup_container_event_listeners = function () {
     this.container.addEventListener("click", this.click_listner, false);
 
     this.container.addEventListener("focusout", function (e) {
+      console.log(document.activeElement);
       if (isMobile.any()) {
+          // TODO remove button only when necessary
           //that.destroy_mobile_input();
       }
     }, false);
 
-    this.container.addEventListener("keyup", stop_event);
-
+    this.old_len = null;
     this.keydown_listener = function(e) {
-        if (that.process_input(e.key, e.ctrlKey))
-            stop_event(e);
-    };
-    this.container.addEventListener("keydown", this.keydown_listener, false);
-
-    this.paste_listner = function(event){
-        var text = event.clipboardData.getData('text');
-        var lines = text.split("\n");
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            for (var c of line) {
-                that.process_input(c, false);
-            }
-            if (i != (lines.length - 1))
-                that.process_input("Enter", false);
+        that.old_value = that.output.get();
+        if (that.old_len == null) {
+            that.old_len = that.output.get().length;
         }
 
-        stop_event(event);
-    }
-    this.container.addEventListener("paste", this.paste_listner, false);
+        if (that.process_input(e.key, e.ctrlKey)) {
+            return stop_event(e);
+        } else if (e.ctrlKey) {
+            return;
+        }
+
+        if (that.output.selectionStart < that.old_len) {
+            that.output.selectionStart = that.output.get().length;
+        }
+    };
+    this.output.addEventListener("keydown", this.keydown_listener, false);
+
+    // TODO cleanup this, keydown_listener and process_input
+    // consider making them all methods on the class
+    // TODO move old_len/old_value into output and refactor output to be a
+    // separate class
+    this.input_listener = function (e) {
+        function restore() {
+            console.log("restoring '" + that.old_value + "'");
+            that.output.set(that.old_value);
+        }
+
+        if (that.disable_events || that.output.selectionStart < that.old_len) {
+            return restore();
+        }
+
+        if (e.inputType.indexOf("delete") >= 0) {
+            if (that.output.get().length < that.old_len) {
+                return restore();
+            }
+        }
+
+        if (e.inputType.indexOf("insert") >= 0) {
+            that.old_value = that.output.get().slice(0, -1 * e.data.length);
+            if (that.old_len == null) {
+                that.old_len = that.output.get().length - e.data.length;
+            }
+        }
+    };
+    this.output.addEventListener("input", this.input_listener, false);
+
     this.disable_events = false;
-}
+};
 
 Shell.prototype.remove_container_event_listeners = function () {
     var that = this;
@@ -417,21 +375,21 @@ Shell.prototype.remove_container_event_listeners = function () {
         }, false);
     }
 
-    if (this.keyup_listener) {
-        this.container.removeEventListener("keyup", this.keyup_listener);
-        this.container.addEventListener("keyup", stop_event);
-    }
-
-    if (this.keydown_listener) {
-        this.container.removeEventListener("keydown", this.keydown_listener, false);
-        this.container.addEventListener("keydown", stop_event, false);
-    }
-
-    if (this.paste_listener) {
-        this.container.removeEventListener("paste", this.paste_listener, false);
-        this.container.addEventListener("paste", stop_event, false);
-    }
     this.disable_events = true;
+};
+
+Shell.prototype.simulate_input = function (input) {
+    if (this.old_len == null) {
+        this.old_len = this.output.get().length;
+    }
+
+    for (var c of input) {
+        var key = c;
+        if (key == "\n")
+          key = "Enter";
+        this.process_input(key, false);
+        this.output.append(c);
+    }
 };
 
 /**
@@ -599,6 +557,8 @@ Shell.prototype.main = async function (base_url) {
     await this._init(base_url);
     while (true) {
         this.output.append(this.prompt(this));
+        this.old_value = this.output.get();
+        this.old_len = this.old_value.length;
 
         var command = "";
         var file = await this.filesystem.open(this.input_path);
