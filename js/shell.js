@@ -37,6 +37,10 @@ const possible_commands = [
         description: "Change current working directory",
     },
     {
+        name: "clear",
+        description: "Clear the terminal",
+    },
+    {
         name: "chmod",
         description: "Change mode of a file",
     },
@@ -199,6 +203,73 @@ ShellFS.prototype.write = function (file, buffer) {
     return buffer.length;
 };
 
+function Output(container) {
+    this.element = document.createElement("textarea");
+    this.element.className = "terminal";
+    this.element.autocomplete = "off";
+    this.element.autocorrect = "off";
+    this.element.autocapitalize = "off";
+    this.element.spellcheck = false;
+
+    this.old_len = null;
+    this.old_value = "";
+
+    this.update_old_info();
+
+    container.appendChild(this.element);
+}
+
+Output.prototype.append = function(text) {
+    this.element.value += text;
+    this.element.scrollTop = this.element.scrollHeight;
+}
+
+Output.prototype.get = function() {
+    return this.element.value;
+}
+
+Output.prototype.set = function(text) {
+    this.element.value = text;
+    this.element.scrollTop = this.element.scrollHeight;
+}
+
+Output.prototype.update_old_info = function () {
+    this.old_value = this.get();
+    if (this.old_len == null) {
+        this.old_len = this.get().length;
+    }
+}
+
+Output.prototype.set_old_info = function (old_value) {
+    this.old_value = old_value;
+    if (this.old_len == null)
+        this.old_len = old_value.length;
+}
+
+Output.prototype.flush = function () {
+    this.old_len = null;
+}
+
+
+Output.prototype.invalid_cursor_pos = function() {
+    return this.element.selectionStart < this.old_len;
+}
+
+Output.prototype.fix_cursor_pos = function() {
+    if (this.invalid_cursor_pos())
+        this.element.selectionStart = this.get().length;
+}
+
+Output.prototype.restore = function () {
+    console.log("restoring '" + this.old_value + "'");
+    this.set(this.old_value);
+}
+
+Output.prototype.clear_input = function () {
+    if (this.get().length > this.old_len) {
+        this.set(this.get().slice(0, this.old_len));
+    }
+}
 
 /**
  * Shell models a single process operating system, a GUI, and a userspace shell.
@@ -231,31 +302,9 @@ Shell.prototype.setup_container_and_output = function(parent) {
     this.container.tabIndex = "0";
     this.container.style.maxHeight = "250px";
 
-    this.output = document.createElement("textarea");
-    this.output.className = "terminal";
-
-    this.output.autocomplete = "off";
-    this.output.autocorrect = "off";
-    this.output.autocapitalize = "off";
-    this.output.spellcheck = false;
-
-    this.output.append = function(text) {
-        that.output.value += text;
-        that.output.scrollTop = that.output.scrollHeight;
-    }
-
-    this.output.get = function() {
-        return that.output.value;
-    }
-
-    this.output.set = function(text) {
-        that.output.value = text;
-        that.output.scrollTop = that.output.scrollHeight;
-    }
-
+    this.output = new Output(this.container);
 
     this.setup_container_event_listeners();
-    this.container.appendChild(this.output);
 
     if (parent) {
         parent.appendChild(this.container);
@@ -314,12 +363,8 @@ Shell.prototype.setup_container_event_listeners = function () {
       }
     }, false);
 
-    this.old_len = null;
     this.keydown_listener = function(e) {
-        that.old_value = that.output.get();
-        if (that.old_len == null) {
-            that.old_len = that.output.get().length;
-        }
+        that.output.update_old_info();
 
         if (that.process_input(e.key, e.ctrlKey)) {
             return stop_event(e);
@@ -327,40 +372,29 @@ Shell.prototype.setup_container_event_listeners = function () {
             return;
         }
 
-        if (that.output.selectionStart < that.old_len) {
-            that.output.selectionStart = that.output.get().length;
-        }
+        that.output.fix_cursor_pos();
     };
-    this.output.addEventListener("keydown", this.keydown_listener, false);
+    this.output.element.addEventListener("keydown", this.keydown_listener, false);
 
     // TODO cleanup this, keydown_listener and process_input
     // consider making them all methods on the class
-    // TODO move old_len/old_value into output and refactor output to be a
-    // separate class
     this.input_listener = function (e) {
-        function restore() {
-            console.log("restoring '" + that.old_value + "'");
-            that.output.set(that.old_value);
-        }
-
-        if (that.disable_events || that.output.selectionStart < that.old_len) {
-            return restore();
+        if (that.disable_events || that.output.invalid_cursor_pos()) {
+            return that.output.restore();
         }
 
         if (e.inputType.indexOf("delete") >= 0) {
-            if (that.output.get().length < that.old_len) {
-                return restore();
+            if (that.output.get().length < that.output.old_len) {
+                return that.output.restore();
             }
         }
 
         if (e.inputType.indexOf("insert") >= 0) {
-            that.old_value = that.output.get().slice(0, -1 * e.data.length);
-            if (that.old_len == null) {
-                that.old_len = that.output.get().length - e.data.length;
-            }
+            var old_value = that.output.get().slice(0, -1 * e.data.length);
+            that.output.set_old_info(old_value);
         }
     };
-    this.output.addEventListener("input", this.input_listener, false);
+    this.output.element.addEventListener("input", this.input_listener, false);
 
     this.disable_events = false;
 };
@@ -379,10 +413,7 @@ Shell.prototype.remove_container_event_listeners = function () {
 };
 
 Shell.prototype.simulate_input = function (input) {
-    if (this.old_len == null) {
-        this.old_len = this.output.get().length;
-    }
-
+    this.output.update_old_info();
     for (var c of input) {
         var key = c;
         if (key == "\n")
@@ -505,27 +536,23 @@ Shell.prototype.process_input = function (key, ctrlkey) {
         this.update_reader();
         return true;
     } else if(ctrlkey && key == 'v') {
-        if (this.output.selectionStart < this.old_len)
-            this.output.selectionStart = this.output.get().length;
+        this.output.fix_cursor_pos();
         return false;
     } else if (ctrlkey) {
         return false;
     } else if (key === "Enter") {
-        var text = this.output.get().slice(this.old_len) + "\n";
+        var text = this.output.get().slice(this.output.old_len) + "\n";
         this.stdin = this.stdin.concat(Array.from(text));
         this.output.append("\n");
         this.update_reader();
-        this.old_len = null;
+        this.output.flush();
         return true;
     } else if (key === "Escape") {
         document.activeElement.blur();
         return true;
     } else if (key === "ArrowUp") {
         if (this.history.length && this.history_index >= 0) {
-            if (this.output.get().length > this.old_len) {
-                this.output.set(this.output.get().slice(0, this.old_len));
-            }
-
+            this.output.clear_input();
             var history_input = this.history[this.history_index].trim();
             this.output.append(history_input);
             this.history_index -= 1;
@@ -533,9 +560,7 @@ Shell.prototype.process_input = function (key, ctrlkey) {
         return true;
     } else if (key === "ArrowDown") {
         if (this.history.length && this.history_index < this.history.length) {
-            if (this.output.get().length > this.old_len) {
-                this.output.set(this.output.get().slice(0, this.old_len));
-            }
+            this.output.clear_input();
 
             if (this.history_index + 1 == this.history.length) {
             } else {
@@ -556,9 +581,9 @@ Shell.prototype.process_input = function (key, ctrlkey) {
 Shell.prototype.main = async function (base_url) {
     await this._init(base_url);
     while (true) {
+        this.output.flush();
         this.output.append(this.prompt(this));
-        this.old_value = this.output.get();
-        this.old_len = this.old_value.length;
+        this.output.set_old_info(this.output.get());
 
         var command = "";
         var file = await this.filesystem.open(this.input_path);
