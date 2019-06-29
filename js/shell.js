@@ -356,7 +356,6 @@ Shell.prototype.setup_container_event_listeners = function () {
     this.container.addEventListener("click", this.click_listner, false);
 
     this.container.addEventListener("focusout", function (e) {
-      console.log(document.activeElement);
       if (isMobile.any()) {
           // TODO remove button only when necessary
           //that.destroy_mobile_input();
@@ -480,23 +479,7 @@ Shell.prototype.get_extended_output_and_cleanup = async function () {
     return output;
 };
 
-/**
- * Perform initialization that requires filesystem/blocking operations
- * This can't be completed by the time the constructor returns.
- */
-Shell.prototype._init = async function (base_url) {
-    this.shellfs_root = "/.shellfs";
-    this.shellfs = new ShellFS(this);
-
-    var s = await this.filesystem.mkdir(this.shellfs_root, 0o777);
-    s = await this.filesystem.mount(this.shellfs_root, this.shellfs);
-
-    this.output_path = this.shellfs_root + "/stdout"
-    this.error_path = this.shellfs_root + "/stderr"
-    this.input_path = this.shellfs_root + "/stdin"
-
-    this.stderr = await this.filesystem.open(this.error_path);
-
+Shell.prototype._load_coreutils = async function(base_url) {
     if (!coreutils_promises) {
         coreutils_promises = [];
         var coreutils_scripts = possible_commands.map(x => base_url + "/js/coreutils/" + x.name + ".js");
@@ -515,59 +498,96 @@ Shell.prototype._init = async function (base_url) {
     for (p of coreutils_promises) {
         await p;
     }
-
-    this._init_resolver();
 }
 
-Shell.prototype.update_reader = function () {
+/**
+ * Perform initialization that requires filesystem/blocking operations
+ * This can't be completed by the time the constructor returns.
+ */
+Shell.prototype._init = async function (base_url) {
+    this.shellfs_root = "/.shellfs";
+    this.shellfs = new ShellFS(this);
+
+    var s = await this.filesystem.mkdir(this.shellfs_root, 0o777);
+    s = await this.filesystem.mount(this.shellfs_root, this.shellfs);
+
+    this.output_path = this.shellfs_root + "/stdout"
+    this.error_path = this.shellfs_root + "/stderr"
+    this.input_path = this.shellfs_root + "/stdin"
+
+    this.stderr = await this.filesystem.open(this.error_path);
+
+    await this._load_coreutils(base_url);
+    this._init_resolver(); // resolve promise to unblock anything waiting on shell initialization
+}
+
+Shell.prototype._update_reader = function () {
     if (this.reader) {
         this.reader();
         this.reader = null;
     }
 }
 
+Shell.prototype.get_history_backwards = function() {
+    if (this.history.length && this.history_index >= 0) {
+        var history_item = this.history[this.history_index].trim();
+        this.history_index -= 1;
+        return history_item;
+    }
+    return null;
+}
+
+Shell.prototype.get_history_forwards = function() {
+    if (this.history.length && this.history_index < this.history.length) {
+        if (this.history_index + 1 == this.history.length) {
+            return ""; // return empty line to clear the current input
+        } else {
+            var history_item = this.history[this.history_index + 1].trim();
+            this.history_index += 1;
+            return history_item;
+        }
+    }
+    return null;
+}
 
 /**
  * Process one character of input to be added to the stdin stream
  */
 Shell.prototype.process_input = function (key, ctrlkey) {
-    if (ctrlkey && key == 'd') {
-        this.stdin_closed = true;
-        this.update_reader();
-        return true;
-    } else if(ctrlkey && key == 'v') {
-        this.output.fix_cursor_pos();
+    if(ctrlkey) {
+        if (key == 'd') {
+            this.stdin_closed = true;
+            this._update_reader();
+            return true;
+        }
+
+        if (key == 'v') {
+            this.output.fix_cursor_pos();
+        }
         return false;
-    } else if (ctrlkey) {
-        return false;
+
     } else if (key === "Enter") {
         var text = this.output.get().slice(this.output.old_len) + "\n";
         this.stdin = this.stdin.concat(Array.from(text));
         this.output.append("\n");
-        this.update_reader();
+        this._update_reader();
         this.output.flush();
         return true;
     } else if (key === "Escape") {
         document.activeElement.blur();
         return true;
     } else if (key === "ArrowUp") {
-        if (this.history.length && this.history_index >= 0) {
+        var history_input = this.get_history_backwards();
+        if (history_input != null) {
             this.output.clear_input();
-            var history_input = this.history[this.history_index].trim();
             this.output.append(history_input);
-            this.history_index -= 1;
         }
         return true;
     } else if (key === "ArrowDown") {
-        if (this.history.length && this.history_index < this.history.length) {
+        var history_input = this.get_history_forwards();
+        if (history_input != null) {
             this.output.clear_input();
-
-            if (this.history_index + 1 == this.history.length) {
-            } else {
-                var history_input = this.history[this.history_index + 1].trim();
-                this.output.append(history_input);
-                this.history_index += 1;
-            }
+            this.output.append(history_input);
         }
         return true;
     }
