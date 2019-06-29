@@ -15,7 +15,7 @@ Shell.prototype.handle_umount = async function(command) {
     var path = this.expand_path(command.arguments[1]);
     var error = await this.filesystem.umount(path);
     if (typeof(error) === 'string')
-        return this._return_error("Could not unmount " + path + " (" + error + ")");
+        return this.return_error("Could not unmount " + path + " (" + error + ")");
 
     return 0;
 }

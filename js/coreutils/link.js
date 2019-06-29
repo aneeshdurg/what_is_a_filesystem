@@ -18,5 +18,5 @@ Shell.prototype.handle_link = async function(command) {
 
     var error = await this.filesystem.link(path1, path2);
     if  (typeof(error) === 'string')
-        return this._return_error(error);
+        return this.return_error(error);
 }

@@ -49,7 +49,7 @@ Shell.prototype.handle_ls = async function(command) {
 
     var curr_dir = await this.filesystem.stat(path);
     if (typeof(curr_dir) === 'string')
-        return this._return_error("Could not read dir '.' (" + curr_dir + ")");
+        return this.return_error("Could not read dir '.' (" + curr_dir + ")");
 
     if (!show_hidden) {
         contents = contents.filter((x) => {

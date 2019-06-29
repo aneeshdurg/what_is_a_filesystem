@@ -1,6 +1,6 @@
 Shell.prototype.handle_stat = async function(command) {
     if (command.arguments.length != 2) {
-        this._return_error("stat expects a single filename!");
+        this.return_error("stat expects a single filename!");
     }
 
     var path = this.expand_path(command.arguments[1]);
@@ -20,5 +20,5 @@ Shell.prototype.handle_stat = async function(command) {
 
     var error = this.filesystem.write(command.output, str_to_bytes(stat_str));
     if (typeof(error) === 'string')
-        this._return_error(error);
+        this.return_error(error);
 }

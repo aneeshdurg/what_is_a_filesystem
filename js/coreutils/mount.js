@@ -19,10 +19,10 @@ Shell.prototype.handle_mount = async function(command) {
     var filesystem = command.arguments[2];
     var info = await this.filesystem.stat(path);
     if (typeof(info) === 'string')
-        return this._return_error(info);
+        return this.return_error(info);
 
     if (!info.is_directory)
-        return this._return_error(path + "is not a directory!");
+        return this.return_error(path + "is not a directory!");
 
     var that = this;
     var should_exec = true;
@@ -42,7 +42,7 @@ Shell.prototype.handle_mount = async function(command) {
     })();
 
     if (typeof(fs) === 'string')
-        return this._return_error(fs);
+        return this.return_error(fs);
 
     if (fs == should_exec) {
         var fs_path = that.expand_path(filesystem);
@@ -53,11 +53,11 @@ Shell.prototype.handle_mount = async function(command) {
     }
 
     if (!(fs instanceof DefaultFS))
-        return this._return_error(filesystem + " is not an instance of DefaultFS!");
+        return this.return_error(filesystem + " is not an instance of DefaultFS!");
 
     var error = await this.filesystem.mount(path, fs);
     if (typeof(error) === 'string')
-        return this._return_error(error);
+        return this.return_error(error);
 
     return 0;
 }

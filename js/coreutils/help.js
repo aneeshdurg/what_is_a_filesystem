@@ -7,7 +7,7 @@ Shell.prototype.handle_help = async function(command) {
 
     var error = await this.filesystem.write(command.output, str_to_bytes(help_msg));
     if (typeof(error) === 'string')
-        return this._return_error(error);
+        return this.return_error(error);
 
     return 0;
 }

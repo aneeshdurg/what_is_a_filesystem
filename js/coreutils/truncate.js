@@ -14,12 +14,12 @@ Shell.prototype.handle_truncate = async function(command) {;
 
     var filesize = Number(command.arguments[2]);
     if (!(filesize >= 0)) {
-        return this._return_error("filesize must be a number >= 0");
+        return this.return_error("filesize must be a number >= 0");
     }
 
     var error = await this.filesystem.truncate(path, filesize);
     if (typeof(error) === 'string')
-        return this._return_error(error);
+        return this.return_error(error);
 
     return 0;
 }

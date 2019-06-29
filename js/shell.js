@@ -622,7 +622,7 @@ Shell.prototype.run_command = async function (input) {
 
     command.output = await this.filesystem.open(command_output, open_flags, this.umask);
     if (typeof(command.output) === 'string')
-        return this._return_error("Could not open " + command_output + " for writing");
+        return this.return_error("Could not open " + command_output + " for writing");
 
     for (var i = 0; i < possible_commands.length; i++) {
         if (command.arguments[0] == possible_commands[i].name)
@@ -683,7 +683,7 @@ Shell.prototype.expand_path = function(path) {
 /**
  * Print and return an error
  */
-Shell.prototype._return_error = async function(error) {
+Shell.prototype.return_error = async function(error) {
     await this.filesystem.write(this.stderr, str_to_bytes(
             "Error: " + error + "\n"));
     return error;

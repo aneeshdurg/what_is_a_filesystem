@@ -10,7 +10,7 @@ Shell.prototype.handle_rm = async function(command) {
     var path = this.expand_path(command.arguments[i]);
     var info = await this.filesystem.stat(path);
     if (typeof(info) === 'string') {
-      return this._return_error("Could not delete " + path + "(" + info + ")");
+      return this.return_error("Could not delete " + path + "(" + info + ")");
     }
 
     var error = null;
@@ -19,7 +19,7 @@ Shell.prototype.handle_rm = async function(command) {
     } else if (recurse) {
       var dir_contents = await this.filesystem.readdir(path);
       if (typeof(dir_contents) === 'string')
-        return this._return_error(dir_contents);
+        return this.return_error(dir_contents);
       // Remove the '.' and '..' entries
       dir_contents = dir_contents.slice(2);
 
@@ -39,6 +39,6 @@ Shell.prototype.handle_rm = async function(command) {
     }
 
     if (typeof(error) === 'string')
-      return this._return_error(error);
+      return this.return_error(error);
   }
 }

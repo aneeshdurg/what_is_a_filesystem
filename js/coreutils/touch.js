@@ -1,6 +1,6 @@
 Shell.prototype.handle_touch = async function(command) {
     if (command.arguments.length < 2)
-        return this._return_error("touch requires a filename!");
+        return this.return_error("touch requires a filename!");
 
     for (var i = 1; i < command.arguments.length; i++) {
         var path = this.expand_path(command.arguments[i]);
@@ -13,7 +13,7 @@ Shell.prototype.handle_touch = async function(command) {
             }
            
             if (error)
-                return this._return_error(
+                return this.return_error(
                     "Could not touch file " + command.arguments[i] + " (" + error + ")");
         }
     }

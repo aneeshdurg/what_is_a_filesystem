@@ -17,7 +17,7 @@ Shell.prototype.handle_edit = async function (command) {
     var info = await this.filesystem.stat(path);
     if (typeof(info) === 'string') {
         if (info !== 'ENOENT') {
-            return this._return_error(info);
+            return this.return_error(info);
         }
     } else {
         filesize = info.filesize;
@@ -25,12 +25,12 @@ Shell.prototype.handle_edit = async function (command) {
 
     var file = await this.filesystem.open(path, O_RDWR | O_CREAT, this.umask);
     if (typeof(file) === 'string')
-        return this._return_error(file);
+        return this.return_error(file);
 
     var file_buffer = new Uint8Array(new ArrayBuffer(filesize));
     var bytes_read = await this.filesystem.read(file, file_buffer);
     if (typeof(bytes_read) === 'string')
-        return this._return_error(bytes_read);
+        return this.return_error(bytes_read);
 
     this.create_extended_input(bytes_to_str(file_buffer));
     var new_data = await this.get_extended_output_and_cleanup();
@@ -43,14 +43,14 @@ Shell.prototype.handle_edit = async function (command) {
     await this.filesystem.seek(file, 0, SEEK_SET);
     var bytes_written = await this.filesystem.write(file, str_to_bytes(new_data));
     if (typeof(bytes_written) === 'string')
-        return this._return_error("Could not write to file (" + bytes_written + ")");
+        return this.return_error("Could not write to file (" + bytes_written + ")");
     await this.filesystem.write(this.stderr, str_to_bytes(
         "Wrote " + bytes_written + " bytes to " + command.arguments[1] + "\n"));
 
     await this.filesystem.close(file);
     var error = await this.filesystem.truncate(path, new_data.length);
     if (typeof(error) === 'string')
-        return this._return_error("Could not truncate file (" + error + ")");
+        return this.return_error("Could not truncate file (" + error + ")");
 
     return 0;
 }

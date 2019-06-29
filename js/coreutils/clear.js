@@ -10,7 +10,7 @@ Shell.prototype.handle_clear = async function(command) {
     for (var i = 0; i < lines; i++) {
         var error = await this.filesystem.write(command.output, str_to_bytes("\n"));
         if (typeof(error) === 'string')
-            this._return_error("Could not clear screen (" + error + ")");
+            this.return_error("Could not clear screen (" + error + ")");
     }
     return 0;
 };

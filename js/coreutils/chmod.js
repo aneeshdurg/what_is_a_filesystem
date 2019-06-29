@@ -13,12 +13,12 @@ Shell.prototype.handle_chmod = async function(command) {
     var path = this.expand_path(command.arguments[2]);
     var permissions = Number(command.arguments[1]);
     if (!(permissions >= 0)) {
-        return this._return_error("Invalid permissions: " + permissions);
+        return this.return_error("Invalid permissions: " + permissions);
     }
 
     var error = await this.filesystem.chmod(path, permissions);
     if (typeof(error) === 'string')
-        return this._return_error(error);
+        return this.return_error(error);
 
     return 0;
 };

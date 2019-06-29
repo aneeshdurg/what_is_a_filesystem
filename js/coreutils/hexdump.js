@@ -24,7 +24,7 @@ Shell.prototype.handle_hexdump_or_read = async function(command) {
         var filepath = this.expand_path(command.arguments[i]);
         var file = await this.filesystem.open(filepath, O_RDONLY);
         if (typeof(file) === 'string')
-            return this._return_error(
+            return this.return_error(
                 'Could not open file ' + command.arguments[i] + ' (' + file + ')');
 
         var bufferlen = 16;
@@ -47,7 +47,7 @@ Shell.prototype.handle_hexdump_or_read = async function(command) {
 
             var bytes_read = await this.filesystem.read(file, buffer);
             if (typeof(bytes_read) === 'string')
-                return this._return_error(
+                return this.return_error(
                     'Could not read file ' + command.arguments[i] + ' (' + bytes_read + ')');
 
             var write_buffer = null;
