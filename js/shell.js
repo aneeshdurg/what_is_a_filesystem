@@ -362,6 +362,7 @@ Shell.prototype.setup_container_event_listeners = function () {
       }
     }, false);
 
+    // TODO cleanup output event listener, consider making them all methods on the Output class
     this.keydown_listener = function(e) {
         that.output.update_old_info();
 
@@ -375,8 +376,6 @@ Shell.prototype.setup_container_event_listeners = function () {
     };
     this.output.element.addEventListener("keydown", this.keydown_listener, false);
 
-    // TODO cleanup this, keydown_listener and process_input
-    // consider making them all methods on the class
     this.input_listener = function (e) {
         if (that.disable_events || that.output.invalid_cursor_pos()) {
             return that.output.restore();
@@ -504,7 +503,7 @@ Shell.prototype._load_coreutils = async function(base_url) {
  * Perform initialization that requires filesystem/blocking operations
  * This can't be completed by the time the constructor returns.
  */
-Shell.prototype._init = async function (base_url) {
+Shell.prototype.init = async function (base_url) {
     this.shellfs_root = "/.shellfs";
     this.shellfs = new ShellFS(this);
 
@@ -599,7 +598,7 @@ Shell.prototype.process_input = function (key, ctrlkey) {
  * Read and execute commands from stdin
  */
 Shell.prototype.main = async function (base_url) {
-    await this._init(base_url);
+    await this.init(base_url);
     while (true) {
         this.output.flush();
         this.output.append(this.prompt(this));
