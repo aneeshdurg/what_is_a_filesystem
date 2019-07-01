@@ -1,3 +1,5 @@
+const base_url = "__src__";
+
 function check_test_case(test) {
     return expect(test.actual).toBe(test.expected);
 }
@@ -8,7 +10,13 @@ async function get_shell(fs) {
     }
 
     var shell = new Shell(fs, null);
-    // jasmine hosts the project source at __src__
-    await shell.init("__src__");
+    await shell.init(base_url);
     return shell;
+}
+
+async function sleep(time) {
+    var resolve = null;
+    var wait_for_sleep = new Promise(r => { resolve = r; });
+    setTimeout(resolve, time);
+    await wait_for_sleep;
 }
