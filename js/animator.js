@@ -19,11 +19,11 @@ function FSAnimator(fs, canvas, block_limit) {
 
     this.registered_inodes = {};
     this.registered_blocks = {};
+    this.register_inode(0);
 
     this.reading_blocks = [];
-    this.selected_inodes = [];
 
-    this.register_inode(0);
+    this.selected_inode = null;
 
     this.duration = null;
     this.timer = null;
@@ -95,6 +95,8 @@ FSAnimator.prototype.draw = function() {
     }
 
     this.ctx.translate(-1 * this.canvas.width * this.inode_space, 0);
+
+    this.draw_selected_inode();
 
     if (currtask) {
         currtask.resolve();
@@ -173,6 +175,19 @@ function canvas_arrow(context, fromx, fromy, tox, toy){
 }
 
 FSAnimator.prototype.select_inode = function (inodenum, inode){
+    this.selected_inode = {
+        inodenum: inodenum,
+        inode: inode,
+    };
+};
+
+FSAnimator.prototype.draw_selected_inode = function() {
+    if (!this.selected_inode)
+        return;
+
+    var inodenum = this.selected_inode.inodenum;
+    var inode = this.selected_inode.inode;
+
     console.log("Selected " + (new Error()).stack);
     this.ctx.translate(0, this.ctx.canvas.height / 2);
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
@@ -239,4 +254,5 @@ FSAnimator.prototype.select_inode = function (inodenum, inode){
     }
 
     this.ctx.translate(0, -1 * this.ctx.canvas.height / 2);
-};
+
+}
