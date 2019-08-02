@@ -1,45 +1,46 @@
-function DefaultFS(){};
+class DefaultFS {
+    /**
+     * Naming conventions:
+     *
+     * dir - a path that should point to a directory
+     * fs - an instance of DefaultFS or a file containing a program returning an
+     *      instance of DefaultFS
+     * path - a path on the filesystem relative to the root of the filesystem
+     *      paths must not end in trailing '/'s
+     * mode - a number describing file permissions
+     * fd - an instance of FileDescriptor
+     * buffer - an instance of Uint8Array
+     */
+    mount(dir, fs) { return not_implemented(); }
+    umount(dir) { return not_implemented(); }
+    readdir(dir) { return not_implemented(); }
+    stat(path) { return not_implemented(); }
+    unlink(path) { return not_implemented(); }
+    create(path, mode) { return not_implemented(); }
+    truncate(path, size) { return not_implemented(); }
+    open(path, flags, mode) { return not_implemented(); }
+    close(fd) { return not_implemented(); }
+    chmod(path, mode) { return not_implemented(); }
+    ioctl(fd, request, data) { return not_implemented(); }
+    link(src_path, dst_path) { return not_implemented(); }
+    mkdir(path, mode) { return not_implemented(); }
+    write(fd, buffer) { return not_implemented(); }
+    read(fd, buffer) { return not_implemented(); }
+    async seek(fd, offset, whence) {
+        var info = await fd.fs.stat(fd.path);
+        if (typeof(info) == 'string')
+            return "EBADF"
 
-/**
- * Naming conventions:
- *
- * dir - a path that should point to a directory
- * fs - an instance of DefaultFS or a file containing a program returning an
- *      instance of DefaultFS
- * path - a path on the filesystem relative to the root of the filesystem
- *      paths must not end in trailing '/'s
- * mode - a number describing file permissions
- * fd - an instance of FileDescriptor
- * buffer - an instance of Uint8Array
- */
-DefaultFS.prototype.mount = function (dir, fs) { return not_implemented(); }
-DefaultFS.prototype.umount = function (dir) { return not_implemented(); }
-DefaultFS.prototype.readdir = function (dir) { return not_implemented(); }
-DefaultFS.prototype.stat = function (path) { return not_implemented(); }
-DefaultFS.prototype.unlink = function (path) { return not_implemented(); }
-DefaultFS.prototype.create = function (path, mode) { return not_implemented(); }
-DefaultFS.prototype.truncate = function (path, size) { return not_implemented(); }
-DefaultFS.prototype.open = function (path, flags, mode) { return not_implemented(); }
-DefaultFS.prototype.close = function (fd) { return not_implemented(); }
-DefaultFS.prototype.chmod = function (path, mode) { return not_implemented(); }
-DefaultFS.prototype.ioctl = function (fd, request, data) { return not_implemented(); }
-DefaultFS.prototype.link = function (src_path, dst_path) { return not_implemented(); }
-DefaultFS.prototype.mkdir = function (path, mode) { return not_implemented(); }
-DefaultFS.prototype.write = function (fd, buffer) { return not_implemented(); }
-DefaultFS.prototype.read = function (fd, buffer) { return not_implemented(); }
-DefaultFS.prototype.seek = async function (fd, offset, whence) {
-    var info = await fd.fs.stat(fd.path);
-    if (typeof(info) == 'string')
-        return "EBADF"
+        if (whence == SEEK_SET)
+            fd.offset = offset;
+        else if (whence == SEEK_CURR)
+            fd.offset += offset;
+        else if (whence == SEEK_END)
+            fd.offset = info.filesize + offset;
+        else
+            return "EINVAL";
 
-    if (whence == SEEK_SET)
-        fd.offset = offset;
-    else if (whence == SEEK_CURR)
-        fd.offset += offset;
-    else if (whence == SEEK_END)
-        fd.offset = info.filesize + offset;
-    else
-        return "EINVAL";
+        return 0;
+    };
 
-    return 0;
-};
+}

@@ -12,7 +12,7 @@ const SEEK_END = 1;
 const SEEK_CURR = 2;
 
 /**
- * IOCTL numbers need to be unique, this is a good way of ensuring that.
+ * IOCTL numbers need to be unique, this is a good way of ensuring that (up to overflow).
  * Arguably, this is overkill, since they only need to be unique *per* filesystem.
  */
 var __ioctl_counter = 0;
@@ -21,15 +21,28 @@ function get_unused_ioctl_num() { return __ioctl_counter++; }
 const IOCTL_IS_TTY = get_unused_ioctl_num();
 const IOCTL_SELECT_INODE = get_unused_ioctl_num();
 
-function FileDescriptor(fs, path, inodenum, inode, mode) {
-    this.fs = fs;
-    this.path = path;
-    this.inodenum = inodenum;
-    this.inode = inode;
-    this.mode = mode;
-    this.offset = 0;
+class FileDescriptor {
+    constructor(fs, path, inodenum, inode, mode) {
+        this.fs = fs;
+        this.path = path;
+        this.inodenum = inodenum;
+        this.inode = inode;
+        this.mode = mode;
+        this.offset = 0;
+    }
 }
 
+class Dirent {
+    constructor(inodenum, filename) {
+        this.inodenum = inodenum;
+        this.filename = filename;
+    }
+}
+
+/**
+ * Stat - a class that describes the output of a `stat` call.
+ * This class is generated dynamically from the list below
+ */
 const _stat_params = [
     "path",
     "inodenum",
@@ -50,10 +63,3 @@ function _gen_stat() {
     return eval(stat_src);
 }
 const Stat = _gen_stat();
-
-function Dirent(inodenum, filename) {
-    this.inodenum = inodenum;
-    this.filename = filename;
-}
-
-
