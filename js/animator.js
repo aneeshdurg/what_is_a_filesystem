@@ -80,6 +80,9 @@ class FSAnimator {
             if (this.registered_blocks[i] != null) {
                 this.ctx.fillStyle = this.registered_inodes[this.registered_blocks[i]];
                 this.ctx.fill();
+            } else {
+                this.ctx.fillStyle = "white";
+                this.ctx.fill();
             }
             this.ctx.stroke();
         }
@@ -197,7 +200,7 @@ class FSAnimator {
         this.ctx.beginPath();
         this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
         this.ctx.rect(0, 0, this.inode_width * 5, this.ctx.canvas.height / 2);
-        this.ctx.fillStyle = this.registered_inodes[inodenum];
+        this.ctx.fillStyle = inode.num_links ? this.registered_inodes[inodenum] : "white";
         this.ctx.fill();
         this.ctx.stroke();
 
