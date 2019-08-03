@@ -487,21 +487,10 @@ class Shell {
 
     async _load_coreutils(base_url) {
         if (!coreutils_promises) {
-            coreutils_promises = [];
-            var coreutils_scripts = possible_commands.map(x => base_url + "/js/coreutils/" + x.name + ".js");
-            for (let src of coreutils_scripts) {
-                var resolve = null;
-                var p = new Promise(r => resolve = r);
-                coreutils_promises.push(p)
-
-                var script_el = document.createElement("script");
-                script_el.src = src;
-                script_el.onload = resolve;
-                document.head.appendChild(script_el);
-            }
+            coreutils_promises = possible_commands.map(x => import("./coreutils/" + x.name + ".js"));
         }
 
-        for (p of coreutils_promises) {
+        for (let p of coreutils_promises) {
             await p;
         }
     }
