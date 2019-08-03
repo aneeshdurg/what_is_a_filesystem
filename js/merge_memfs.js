@@ -29,7 +29,10 @@ function get_memfs_from_inputs(use_solution) {
 		source = get_all_solns();
 	else
 		source = get_all_inputs();
-	source = "function MemFS() { this.setup_root(); }; inherit(MemFS, DefaultFS); \n" + source;
+	source = "var MemFS = class extends DefaultFS {" +
+    "    constructor() { super(); this.setup_root(); }" +
+    "}\n" + source;
+
 	var MemFS = (function() {
 		try {
 			eval(source);

@@ -1,6 +1,5 @@
-function TestFS() {};
+class TestFS extends DefaultFS {}
 function TestFSSetup() {
-    inherit(TestFS, DefaultFS);
     function _gen_TestFS_attr(attr) {
         return "TestFS.prototype." + attr + "= function() { " +
             "this." + attr + "_called = arguments;" +

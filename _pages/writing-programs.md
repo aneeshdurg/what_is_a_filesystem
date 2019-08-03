@@ -244,8 +244,7 @@ It may look something like this:
 
 ```javascript
 (async function (command) {
-    function SampleFS() {}
-    inherit(SampleFS, DefaultFS);
+    class SampleFS extends DefaultFS {};
 
     SampleFS.prototype.readdir = function() {
         console.log("Hello world!");

@@ -87,9 +87,8 @@ If you're stuck check out these hints below:
 {% assign write_placeholder = "MYVFS_WRITE" %}
 
 <pre id="myvfs_code">
-function MyVFS() {};
 // populates MyVFS with generic error functions for all callbacks
-inherit(MyVFS, DefaultFS);
+var MyVFS = class extends DefaultFS{};
 
 // implement a few other callbacks like readdir
 // -- snip --
@@ -138,17 +137,17 @@ window.onload = function () {
     orig_code = q_container.textContent;
 
     var question_code = orig_code.replace(
-        "{{ read_placeholder }}", "<textarea id='{{ read_placeholder }}'></textarea>");
+        "{{ read_placeholder }}", "<textarea class='code' id='{{ read_placeholder }}'></textarea>");
     question_code = question_code.replace(
-        "{{ write_placeholder }}", "<textarea id='{{ write_placeholder }}'></textarea>");
+        "{{ write_placeholder }}", "<textarea class='code' id='{{ write_placeholder }}'></textarea>");
     q_container.innerHTML = question_code;
 
     // Generate solution
     var s_container = document.getElementById('myvfs_soln');
     var solution_code = orig_code.replace(
-        "{{ read_placeholder }}", "buffer.fill(0);\n    return buffer.length;");
+        "{{ read_placeholder }}", "    buffer.fill(0);\n    return buffer.length;");
     solution_code = solution_code.replace(
-        "{{ write_placeholder }}", "return buffer.length;");
+        "{{ write_placeholder }}", "\n    return buffer.length;");
     s_container.innerHTML = solution_code;
 
     cache_input("{{ read_placeholder }}");

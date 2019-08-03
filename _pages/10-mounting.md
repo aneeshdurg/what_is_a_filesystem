@@ -68,23 +68,40 @@ You can find the full details regarding each callback in [/pages/filesystem-oper
 <details><summary>How do classes work in javascript?</summary>
 <div markdown="1">
 The code above defines a class in javascript named `defaultFS`.
-To define a class, first define a function with the desired class name.
+To define a class, we can use the class keyword.
 You can use the `this` keyword to set and get properties of the class.
+The constructor of the class is just a special method named `constructor`.
 E.g. to define a class that has a constructor that takes in 1 parameter and saves it as a property:
 
 ```javascript
-function MyClass(x) {
-    this.my_x = x;
+class MyClass {
+    constructor(x) {
+        this.my_x = x;
+    }
 }
 ```
 
 And now we can create a new instance of the class with:
 ```javascript
 var instance = new MyClass('a');
-console.log(instance.my_x);
+console.log(instance.my_x); // Will print 'a' to the consol
 ```
 
-To add methods on the class we add it to the prototype of the class like so:
+To add methods on the class we have two options, the first: add it to the class definition
+
+``javascript
+class MyClass {
+    constructor(x) {
+        this.my_x = x;
+    }
+
+    print_my_x() {
+        console.log(this.my_x);
+    }
+}
+```
+
+Alternatively we can add it to the prototype of the class like so:
 
 ```javascript
 MyClass.prototype.print_my_x = function () {
@@ -92,7 +109,15 @@ MyClass.prototype.print_my_x = function () {
 };
 ```
 
-[W3School has really good javascript tutorials if you want to learn more.](https://www.w3schools.com/js/js_object_prototypes.asp)
+This method is useful for either longer class definitions or splitting up a
+class across files.
+It comes from a slightly older syntax used to define classes in javascript.
+In this chapter, we'll primarily be used the second, older, way of defining methods.
+
+W3School has really good javascript tutorials if you want to learn more.
++ [More about classes](https://www.w3schools.com/js/js_classes.asp)
++ [More about object prototypes](https://www.w3schools.com/js/js_object_prototypes.asp)
+
 </div>
 </details>
 <br>
@@ -105,14 +130,11 @@ We can ignore `ioctl`, a filesystem operation that's used to managed devices.
 We can use the default implementation of `seek`. Everything else has to be implemented by us.
 
 We've provided several helper functions in [/js/fs_helper.js]({{ '/js/fs_helper.js' | relative_url }}) and some helpful definitions in [/js/defs.js]({{ '/js/defs.js' | relative_url }}).
-To kick things off, let's use `inherit` from `fs_helper.js` to inherit from `DefaultFS`.
+To kick things off, let's inherit the FS interface from `DefaultFS`.
 
 ```javascript
-function MemFS() {}
-inherit(MemFS, DefaultFS);
+class MemFS extends DefaultFS {}
 ```
-
-Note that in this case, we don't call the constructor of `DefaultFS` in `MemFS` because we know the constructor of `DefaultFS` does nothing.
 
 From here on out, we'll be walking through the design/implementation of our filesystem `MemFS`. If you'd like to skip to the end and work on your own, [scroll to the end of this section](#MemFS)
 
@@ -130,8 +152,10 @@ What do we need to store to describe a regular file (i.e. not a directory)?
 Let's go ahead and implement that!
 
 <pre id="file_class_memfs">
-function File() {
-<textarea id="file_class_input"></textarea>
+class File {
+    constructor() {
+<textarea class="code" id="file_class_input"></textarea>
+    }
 }
 </pre>
 <script>
@@ -139,13 +163,15 @@ cache_input("file_class_input");
 </script>
 <details><summary>Solution</summary>
 <pre id="file_class_soln">
-function File() {
-    this.num_links = 0;
-    this.permissions = 0;
-    this.data = [];
-    this.atim = Date.now();
-    this.mtim = Date.now();
-    this.ctim = Date.now();
+class File {
+    constructor() {
+        this.num_links = 0;
+        this.permissions = 0;
+        this.data = [];
+        this.atim = Date.now();
+        this.mtim = Date.now();
+        this.ctim = Date.now();
+    }
 }
 </pre>
 </details>
@@ -153,22 +179,24 @@ function File() {
 Let's move on to directories.
 A directory just needs to store a map of names to other `File`s or directories.
 <pre id="directory_class_memfs">
-function Directory() {
-    File.call(this); // Call the constructor of the parent class
-<textarea id="directory_class_input"></textarea>
+class Directory extends File {
+    constructor() {
+        super(); // Call the constructor of the parent class
+<textarea class="code" id="directory_class_input"></textarea>
+    }
 }
-inherit(Directory, File);
 </pre>
 <script>
 cache_input("directory_class_input");
 </script>
 <details><summary>Solution</summary>
 <pre id="directory_class_soln">
-function Directory() {
-    File.call(this); // Call the constructor of the parent class
-    this.files = {};
+class Directory extends File {
+    constructor() {
+        super(); // Call the constructor of the parent class
+        this.files = {};
+    }
 }
-inherit(Directory, File);
 </pre>
 </details>
 
@@ -180,7 +208,7 @@ Make sure you set the permissions on the directory to `0o755` so that we actuall
 
 <pre id="setup_root_memfs">
 MemFS.prototype.setup_root = function () {
-<textarea id="setup_root_input"></textarea>
+<textarea class="code" id="setup_root_input"></textarea>
 }
 </pre>
 <script>
@@ -195,6 +223,16 @@ MemFS.prototype.setup_root = function () {
 </pre>
 </details>
 
+Accordingly, we'll now update the definition of MemFS to be:
+```javascript
+class MemFS extends DefaultFS {
+  constructor() {
+    super(); // Call the DefaultFS constructor
+    this.setup_root();
+  }
+}
+```
+
 Now, for most of the methods we'll be working on, we'll want to access the underlying `File` for a given path.
 Let's make a method to find the `File` instance associated to a certain path.
 Start at the root directory and work your way down.
@@ -206,7 +244,7 @@ If the file doesn't exist, return `"ENOENT"`.
 
 <pre id="find_path_memfs">
 MemFS.prototype.find_file_from_path = function (path) {
-<textarea id="find_path_input"></textarea> 
+<textarea class="code" id="find_path_input"></textarea> 
 };
 </pre>
 <script>
@@ -261,7 +299,7 @@ Don't forget to manage the `num_links` property!
 
 <pre id="create_memfs">
 MemFS.prototype.create = function (path, mode) {
-<textarea id="create_input"></textarea> 
+<textarea class="code" id="create_input"></textarea> 
 };
 </pre>
 <script>
@@ -293,7 +331,7 @@ MemFS.prototype.create = function (path, mode) {
 
 <pre id="mkdir_memfs">
 MemFS.prototype.mkdir = function (path, mode) {
-<textarea id="mkdir_input"></textarea> 
+<textarea class="code" id="mkdir_input"></textarea> 
 };
 </pre>
 <script>
@@ -332,7 +370,7 @@ To list all elements of a map, use `Object.getOwnProperty(map)`.
 
 <pre id="readdir_memfs">
 MemFS.prototype.readdir = function (path) {
-<textarea id="readdir_input"></textarea> 
+<textarea class="code" id="readdir_input"></textarea> 
 };
 </pre>
 <script>
@@ -365,7 +403,7 @@ The next most trivial thing to implement would be link.
 
 <pre id="link_memfs">
 MemFS.prototype.link = function (path1, path2) {
-<textarea id="link_input"></textarea> 
+<textarea class="code" id="link_input"></textarea> 
 };
 </pre>
 <script>
@@ -402,7 +440,7 @@ Don't forget to decrement the `num_links` property.
 
 <pre id="unlink_memfs">
 MemFS.prototype.unlink = function (path) {
-<textarea id="unlink_input"></textarea> 
+<textarea class="code" id="unlink_input"></textarea> 
 };
 </pre>
 <script>
@@ -434,7 +472,7 @@ All we have to do is replace the permission bits.
 
 <pre id="chmod_memfs">
 MemFS.prototype.chmod = function (path, permissions) {
-<textarea id="chmod_input"></textarea> 
+<textarea class="code" id="chmod_input"></textarea> 
 };
 </pre>
 <script>
@@ -463,7 +501,7 @@ Make sure you calculate the filesize by checking the `.length` property of the f
 
 <pre id="stat_memfs">
 MemFS.prototype.stat = function (path) {
-<textarea id="stat_input"></textarea> 
+<textarea class="code" id="stat_input"></textarea> 
 };
 </pre>
 <script>
@@ -506,7 +544,7 @@ Note that if the file does not exist, you don't need to create it here.
 
 <pre id="truncate_memfs">
 MemFS.prototype.truncate = function (path, size) {
-<textarea id="truncate_input"></textarea> 
+<textarea class="code" id="truncate_input"></textarea> 
 };
 </pre>
 <script>
@@ -539,7 +577,7 @@ Set the `mode` parameter to be `flags`.
 
 note that the `flags` parameters will be a set of flags from [/js/defs.js](/js/defs.js) that start with `O_` and are `or`'d together.
 To find out if a particular flag, se `O_APPEND` is present, check the output of `(flags & O_APPEND)`.
-If `O_CREAT` is passed in check if `mode` is truthy, if not, fail and return `"EINVAL"`, if it is, call `create` with `path` and `mode`.
+If `O_CREAT` is passed in check if `mode` is truthy, if not, fail and return `"EINVAL"`, if it is, call `create` with `path` and `mode` (make sure to ignore the error 'EEXISTS').
 
 If `O_APPEND` is passed in, set the offset in the file descriptor to be equal to  the size of the file.
 
@@ -556,7 +594,7 @@ If `O_DIRECTORY` is passed in and the file is not a directory, return "EINVAL".
 
 <pre id="open_memfs">
 MemFS.prototype.open = function (path, flags, mode) {
-<textarea id="open_input"></textarea> 
+<textarea class="code" id="open_input"></textarea> 
 };
 </pre>
 <script>
@@ -620,7 +658,7 @@ You can check the length of the buffer by reading it's `.length` property.
 
 <pre id="read_memfs">
 MemFS.prototype.read = function (fd, buffer) {
-<textarea id="read_input"></textarea> 
+<textarea class="code" id="read_input"></textarea> 
 };
 </pre>
 <script>
@@ -659,7 +697,7 @@ Also note that we don't want to shrink the file while writing (i.e. we should be
 
 <pre id="write_memfs">
 MemFS.prototype.write = function (fd, buffer) {
-<textarea id="write_input"></textarea> 
+<textarea class="code" id="write_input"></textarea> 
 };
 </pre>
 <script>
@@ -683,6 +721,8 @@ MemFS.prototype.write = function (fd, buffer) {
 
 ## MemFS
 <div id="shell_parent"></div>
+<br>
+<br>
 <button onclick="load_memfs(false)">Load MemFS from input</button>
 <button onclick="load_memfs(true)">Load MemFS from solutions</button>
 <script>
@@ -695,8 +735,12 @@ function load_memfs(use_soln) {
     MemFS = get_memfs_from_inputs(use_soln);
     if (MemFS) {
         lfs = new LayeredFilesystem(new MemFS());
-        var shell = new Shell(lfs, document.getElementById("shell_parent"));
-        shell.main("{{ site.baseurl }}");
+        document.getElementById("shell_parent").innerHTML = "Loading...";
+        setTimeout(function() {
+          document.getElementById("shell_parent").innerHTML = "";
+          var shell = new Shell(lfs, document.getElementById("shell_parent"));
+          shell.main("{{ site.baseurl }}");
+        }, 250); // Delaying for 250ms to make it seem like something is happening
     }
 }
 </script>

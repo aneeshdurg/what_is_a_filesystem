@@ -1,12 +1,3 @@
-function inherit(A, B) {
-    A.prototype = Object.create(B.prototype);
-    Object.defineProperty(A.prototype, 'constructor', {
-        value: A,
-        enumerable: false,
-        writable: true
-    });
-}
-
 function split_parent_of(child) {
     if (child == "/")
         return ["/", "/"];
