@@ -42,11 +42,12 @@ describe("Test Shell UI/input features" , function() {
 
     it("Tests keyboard input invalid command", async function() {
         await test_env.shell.initialized;
+        await sleep(1000);
 
         simulate_input_char('a', test_env.shell.output.element);
         simulate_input_char('\n', test_env.shell.output.element);
 
-        await sleep(100);
+        await sleep(500);
 
         expect(test_env.shell.output.element.value).toContain('Invalid command');
     });
