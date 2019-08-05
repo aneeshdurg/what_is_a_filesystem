@@ -249,7 +249,7 @@ class Command {
 
         if (idx != input.length || state.active_quote) {
             // oh noes, an error occurred - need more input
-            throw new ParsingError(state); // TODO return state
+            throw new ParsingError(state);
         } else {
             // append last word being processesd
             if (state.parsing_output_stream) {
@@ -498,7 +498,6 @@ class Shell {
         var that = this;
 
         this.click_listner = function(e) {
-            console.log(Boolean(that.mobile));
             if (isMobile.any()) {
                 if(!that.mobile) {
                     that.setup_mobile_input();
@@ -746,32 +745,47 @@ class Shell {
             this.output.append(this.prompt(this));
             this.output.set_old_info(this.output.get());
 
+            var parser_state = null;
+            var command = null;
             while (true) {
-                var command = "";
                 var file = await this.filesystem.open(this.input_path);
-                while (!command.length || (command.slice(-1) != "\n")) {
+                var input = "";
+                while (!input.length || (input.slice(-1) != "\n")) {
                     // Ignore closed stdin
                     this.stdin_closed = false;
 
                     var buffer = new Uint8Array([0]);
                     var e = await this.filesystem.read(file, buffer);
                     if (e)
-                        command += String.fromCharCode(buffer[0]);
+                        input += String.fromCharCode(buffer[0]);
                 }
-                this.history.push(command);
+                this.history.push(input);
                 this.history_index = this.history.length - 1;
 
-                await this.run_command(command);
-                break;
+                try {
+                    if (parser_state)
+                        command = Command.resume_parse_command(input, parser_state);
+                    else
+                        command = Command.parse_command(input);
+
+                    break;
+                } catch (e) {
+                    if (e instanceof ParsingError) {
+                        parser_state = e.get_state();
+                        continue;
+                    } else {
+                        return this.return_error("Invalid Command");
+                    }
+                }
             }
+            await this.run_command(command);
         }
     }
 
     /**
      * Parse and run a command
      */
-    async run_command(input) {
-        var command = new Command(input);
+    async run_command(command) {
         command.set_default_output(this.output_path);
 
         if (!command.arguments[0])

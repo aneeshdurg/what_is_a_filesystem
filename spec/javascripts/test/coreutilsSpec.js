@@ -9,7 +9,7 @@ describe("Test Shell Commands", function () {
         var error = await shell.filesystem.write(fd, str_to_bytes(expected_str));
         expect(typeof(error)).not.toBe('string');
 
-        await shell.run_command("cat /test_file");
+        await shell.run_command(new Command("cat /test_file"));
 
         var output = shell.output.get();
         expect(output).toContain(expected_str);
@@ -19,7 +19,7 @@ describe("Test Shell Commands", function () {
         // change directory and check relative path
         var shell = await get_shell();
         await shell.filesystem.mkdir("/newdir", 0o777);
-        await shell.run_command("cd /newdir");
+        await shell.run_command(new Command("cd /newdir"));
 
         expect(shell.current_dir).toBe("/newdir");
 
