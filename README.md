@@ -14,5 +14,5 @@ To run tests, install `jasmine` and run `jasmine server`.
 
 ## Where are the docs?!?!
 
-The docs are at [http://aneeshdurg.me/what_is_a_filesystem/pages/writing-programs.html].
+The docs are at http://aneeshdurg.me/what_is_a_filesystem/pages/writing-programs.html.
 You can view the source for the docs in this repo at [/\_pages/writing-programs.md](/_pages/writing-programs.md).
