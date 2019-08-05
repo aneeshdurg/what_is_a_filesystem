@@ -30,7 +30,9 @@ Your program should be an `async` function wrapped in parentheses. A sample prog
 By convention, `return 0` indicates that everything went well.
 To return an error, either use the `throw` keyword in javascript, or call `this._return_error(error_msg_str)`.
 
-## The shell object
+Let's take a look at the components that make this possible.
+
+## The Shell object
 
 Your program will be executed under the context of the shell.
 This means that `this` will refer to an instance of `Shell` from [/js/shell.js]({{ '/js/shell.js' | relative_url }}).
@@ -106,9 +108,9 @@ This function may block, so call it with `await`.
 </div>
 </details>
 
-<details><summary><b>this.run_command(input)</b></summary>
+<details><summary><b>this.run_command(command)</b></summary>
 <div markdown="1">
-Interpret a string (`input`) as though it had been run on the command line and return the output of the program that is run.
+Run a command as if it had been parsed from the command line and return the output of the program that is run.
 </div>
 </details>
 
@@ -130,6 +132,84 @@ Note that this doesn't check if the path actually corresponds to a file on the f
 <details><summary><b>this._return_error(error)</b></summary>
 <div markdown="1">
 Write a string (`error`) to `stderr` and return that string.
+</div>
+</details>
+
+## The Command object
+
+You might have noticed that all our programs so far have been taking a parameter `command`,
+and some have even been grabbing a `FileDescriptor` corresponding to `stdout` from `command.output`.
+
+The `command` object gives us a way to interact with specified command parameters.
+
+A command is a string that (roughly) follows the regex below:
+
+```
+\s*PROGNAME\s*\s(ARG\s*)*(>>?\s*STREAMNAME)?\s*
+```
+
+where `\s` represents any whitespace.
+
++ `PROGNAME` represents the name of the program to be executed
++ `ARG` represents an argument
++ `STREAMNAME` represents the name of an output stream
+
+For each of the "variables" defined above,
+it must either be any character that is not whitespace,
+and not `>`,
+although it may contain whitespace and `>` if they are either preceeded by a `\`
+or if a substring containing them is surrounded by `"`.
+
+The presence of a `"` mandates a corresponding closing `"`.
+To have a variable contain a literal `"`, escape it with a `\`.
+
+Note that whitespace at the beginning and the end of a line will be lost (including a newline) when parsed by a shell.
+(But not if parsed as contiguous input to either `parse_command` or `resume_parse_command`).
+
+A single '>' implies that the output should be redirected to `STREAMNAME`,
+`>>` implies that the output should be appended and should not overwrite the destination.
+
+
+Let's look at how you can construct/use it.
+
+<details><summary><b>static parse_command(input)</b></summary>
+<div markdown="1">
+This static method parses a string `input` as a command.
+If the `input` is incomplete (i.e. has a trailing `\` or an unmatched `"`), it raises a `ParsingError`.
+</div>
+</details>
+
+<details><summary><b>static resume_parse_command(input, state)</b></summary>
+<div markdown="1">
+This static method parses a string `input` as a command and continues parsing from some state, presumably obtained from a `ParsingError`.
+</div>
+</details>
+
+<details><summary><b>[Constructor] Command(input)</b></summary>
+<div markdown="1">
+Takes in a string `input` that will be parsed.
+</div>
+</details>
+
+<details><summary><b>this.output</b></summary>
+<div markdown="1">
+The object returned by a constructor will store the output path here.
+
+If you invoke a program via `run_command` this object will be an instance of `FileDescriptor`,
+opened with `O_WRONLY` and if `this.append_output` is set, with `O_APPEND` otherwise with `O_TRUNC`.
+</div>
+</details>
+
+<details><summary><b>this.append_output</b></summary>
+<div markdown="1">
+Specifies whether output should be appended or overwritten on the output path.
+</div>
+</details>
+
+<details><summary><b>this.arguments</b></summary>
+<div markdown="1">
+A list of command line arguments passed to the program (i.e. `PROGNAME` and all `ARG`s).
+Note that `command.arguments[0]` is the name of the running program.
 </div>
 </details>
 
@@ -176,48 +256,6 @@ For example, the following program tries to read 5 chars from `stdin` and writes
 })
 ```
 
-## The command object
-
-You might have noticed that all our programs so far have been taking a parameter `command`,
-and some have even been grabbing a `FileDescriptor` corresponding to `stdout` from `command.output`.
-
-The `command` object gives us a way to interact with specified command parameters.
-Let's look at how you can construct/use it.
-
-<details><summary><b>[Constructor] Command(input, stdout_path)</b></summary>
-<div markdown="1">
-The constructor for `Command` which takes in a line of input and a path to set as `stdout`.
-</div>
-</details>
-
-<details><summary><b>this.input</b></summary>
-<div markdown="1">
-The original line of input passed to the constructor
-</div>
-</details>
-
-<details><summary><b>this.output</b></summary>
-<div markdown="1">
-The object returned by a constructor will store the output path here.
-
-If you invoke a program via `run_command` this object will be an instance of `FileDescriptor`,
-opened with `O_WRONLY` and if `this.append_output` is set, with `O_APPEND` otherwise with `O_TRUNC`.
-</div>
-</details>
-
-<details><summary><b>this.append_output</b></summary>
-<div markdown="1">
-Specifies whether output should be appended or overwritten on the output path.
-</div>
-</details>
-
-<details><summary><b>this.arguments</b></summary>
-<div markdown="1">
-A list of command line arguments passed to the program.
-Note that `command.arguments[0]` is the name of the running program.
-</div>
-</details>
-
 ## Writing a filesystem as a program
 
 Full disclaimer, it's probably a better idea to go learn how to write a real POSIX filesystem that can run on something like linux or macOS for a number of reasons.
@@ -234,7 +272,7 @@ Assuming you don't have the necessary resources/motivation to do it with legit l
 continue trying to implement your own filesystem for our simulator.
 Don't say I didn't warn you.
 
-To implement a filesystem for mounting, writing a program that returns a filesystem when run.
+To implement a filesystem for mounting, you need to write a program that returns a filesystem when run.
 
 To see more information on how to write a filesystem, read [/pages/filesystem-operations.html]({{ '/pages/filesystem-operations.html' | relative_url }})
 and [/pages/10-mounting.html]({{ '/pages/10-mounting.html' | relative_url }}).
