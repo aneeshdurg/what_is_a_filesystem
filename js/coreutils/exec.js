@@ -1,10 +1,9 @@
 Shell.prototype.handle_exec = async function(command) {
     command.arguments.shift();
-    console.log(command);
     var path = this.expand_path(command.arguments[0]);
     var file = await this.filesystem.open(path, O_RDONLY);
     if (typeof(file) === 'string')
-        return this.return_error("Invalid command: `" + command.input.trim() + "`");
+        return this.return_error("Invalid command: '" + file + "'");
 
     var info = await this.filesystem.stat(path);
     if (typeof(info) === 'string')
@@ -18,7 +17,6 @@ Shell.prototype.handle_exec = async function(command) {
         return this.return_error(bytes_read);
 
     try {
-        console.log(bytes_to_str(file_buffer));
         var program = eval(bytes_to_str(file_buffer));
         return await program.call(this, command);
     } catch (e) {

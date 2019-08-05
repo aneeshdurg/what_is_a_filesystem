@@ -117,25 +117,171 @@ const possible_commands = [
 var coreutils_promises = null;
 
 // command syntax: [args] (> file)
+
+class _Command_state {
+    constructor() {
+        this.parts = [];
+        this.current_word = "";
+        this.output_stream = null;
+        this.append_output = false;
+
+        this.active_quote = false;
+        this.parsing_output_stream = false;
+    }
+
+    flush_word_to_parts() {
+        if (this.parsing_output_stream)
+            throw new Error();
+
+        if (this.current_word) {
+            this.parts.push(this.current_word);
+            this.current_word = "";
+        }
+    }
+
+    flush_word_to_output() {
+        if (this.current_word) {
+            this.output_stream = this.current_word;
+            this.current_word = "";
+        }
+    }
+
+    append_str(c) {
+        this.current_word += c;
+    }
+
+    toggle_active_quote() {
+        this.active_quote = !this.active_quote;
+    }
+
+    set_append_output() {
+        this.append_output = true;
+    }
+
+    set_parsing_output_stream() {
+        this.parsing_output_stream = true;
+    }
+
+    has_word() {
+        return Boolean(this.current_word);
+    }
+}
+
+class ParsingError extends Error {
+    constructor(state) {
+        super();
+        this.state = state;
+    }
+
+    get_state() {
+        return this.state;
+    }
+}
+
 class Command {
-    constructor(input, stdout_path) {
-        this.input = input;
+    // TODO create struct to represent parsing state
+    static parse_command(input) {
+        let state = new _Command_state();
+        return Command.resume_parse_command(input, state);
+    }
 
-        var parts = this.input.trim().split(" ").filter(x => x.length);
-        var redirect_idx = parts.findIndex(x => x == '>');
-        var append = false;
-        if (redirect_idx < 0) {
-            redirect_idx = parts.findIndex(x => x == '>>');
-            append = true;
+    static _parse_command(input) {
+        let state = new _Command_state();
+        return Command._resume_parse_command(input, state);
+    }
+
+    static resume_parse_command(input, state) {
+        var state = Command._resume_parse_command(input, state);
+        return new Command(state);
+    }
+
+    static _resume_parse_command(input, state) {
+        input = input.trim();
+
+        let idx = 0;
+        for(; idx < input.length; idx++) {
+            if (input[idx] == '\\') {
+                // escape the next character
+                if (idx < (input.length - 1)) {
+                    idx++;
+                    state.append_str(input[idx]);
+                } else {
+                    break; // error
+                }
+            } else if (input[idx] == '"') {
+                state.toggle_active_quote();
+            } else if (/\s/.test(input[idx])) {
+                // if there is no active quote, append the current word to parts
+                // if there is an active quote add a space to the current word
+                // else ignore
+                if (state.active_quote) {
+                    state.append_str(input[idx]);
+                } else {
+                    state.flush_word_to_parts();
+                }
+            } else if (input[idx] == '>') {
+                // if there is no active quote the next word is the output stream
+                if (state.active_quote) {
+                    state.append_str(input[idx]);
+                } else {
+                    state.flush_word_to_parts();
+
+                    while (idx < (input.length - 1)) {
+                        if (input[idx + 1] == '>') {
+                            idx++;
+                            state.set_append_output();
+                        } else if (/\s/.test(input[idx + 1])) { // skip following white space
+                            idx++;
+                        } else {
+                            break;
+                        }
+                    }
+                    state.set_parsing_output_stream();
+                }
+            } else {
+                state.append_str(input[idx]);
+            }
         }
 
-        this.output = stdout_path;
-        this.append_output = append;
-        if (redirect_idx >= 0) {
-            this.output = parts[redirect_idx + 1];
-            parts = parts.splice(0, redirect_idx);
+        if (state.parsing_output_stream && (!state.has_word())) {
+            return false; // TODO return state
         }
-        this.arguments = parts;
+
+        if (idx != input.length || state.active_quote) {
+            // oh noes, an error occurred - need more input
+            throw new ParsingError(state);
+        } else {
+            // append last word being processesd
+            if (state.parsing_output_stream) {
+                state.flush_word_to_output();
+            } else {
+                state.flush_word_to_parts();
+            }
+        }
+
+        return state;
+    }
+
+    set_default_output(output) {
+        this.output = this.output || output;
+    }
+
+    constructor(input) {
+        this.arguments = [];
+        this.output = null;
+        this.append_output = false;
+
+        if (typeof(input) == 'string') {
+            input = Command._parse_command(input);
+        }
+
+        if (input instanceof _Command_state) {
+            this.arguments = input.parts;
+            this.output = input.output_stream;
+            this.append_output = input.append_output;
+        } else {
+            throw new Error("Invalid arguments to Command");
+        }
     }
 }
 
@@ -352,7 +498,6 @@ class Shell {
         var that = this;
 
         this.click_listner = function(e) {
-            console.log(Boolean(that.mobile));
             if (isMobile.any()) {
                 if(!that.mobile) {
                     that.setup_mobile_input();
@@ -600,20 +745,39 @@ class Shell {
             this.output.append(this.prompt(this));
             this.output.set_old_info(this.output.get());
 
-            var command = "";
-            var file = await this.filesystem.open(this.input_path);
-            while (!command.length || (command.slice(-1) != "\n")) {
-                // Ignore closed stdin
-                this.stdin_closed = false;
+            var parser_state = null;
+            var command = null;
+            while (true) {
+                var file = await this.filesystem.open(this.input_path);
+                var input = "";
+                while (!input.length || (input.slice(-1) != "\n")) {
+                    // Ignore closed stdin
+                    this.stdin_closed = false;
 
-                var buffer = new Uint8Array([0]);
-                var e = await this.filesystem.read(file, buffer);
-                if (e)
-                    command += String.fromCharCode(buffer[0]);
+                    var buffer = new Uint8Array([0]);
+                    var e = await this.filesystem.read(file, buffer);
+                    if (e)
+                        input += String.fromCharCode(buffer[0]);
+                }
+                this.history.push(input);
+                this.history_index = this.history.length - 1;
+
+                try {
+                    if (parser_state)
+                        command = Command.resume_parse_command(input, parser_state);
+                    else
+                        command = Command.parse_command(input);
+
+                    break;
+                } catch (e) {
+                    if (e instanceof ParsingError) {
+                        parser_state = e.get_state();
+                        continue;
+                    } else {
+                        return this.return_error("Invalid Command");
+                    }
+                }
             }
-            this.history.push(command);
-            this.history_index = this.history.length - 1;
-
             await this.run_command(command);
         }
     }
@@ -621,8 +785,8 @@ class Shell {
     /**
      * Parse and run a command
      */
-    async run_command(input) {
-        var command = new Command(input, this.output_path);
+    async run_command(command) {
+        command.set_default_output(this.output_path);
 
         if (!command.arguments[0])
             return;
