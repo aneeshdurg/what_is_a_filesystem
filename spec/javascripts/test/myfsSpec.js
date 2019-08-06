@@ -201,4 +201,82 @@ describe("Test MyFS", function() {
 
         expect(bytes_to_str(data)).toBe(expected_str);
     });
+
+    it("tests defragmentation", async function() {
+        var fs = new MyFS();
+        async function create(name) {
+            await fs.create(name, 0o777);
+            return await fs.open(name, O_RDWR);
+        }
+
+        var root = await fs.open("/", O_RDONLY);
+
+        var f1 = await create("/1");
+        var f2 = await create("/2");
+        var f3 = await create("/3");
+        for (var i = 0; i < 10; i++) {
+            await fs.write(f1, (new Uint8Array(16)).fill(1));
+            await fs.write(f2, (new Uint8Array(16)).fill(2));
+            await fs.write(f3, (new Uint8Array(16)).fill(3));
+        }
+
+        async function reset_fds() {
+            await fs.seek(root, 0, SEEK_SET);
+            await fs.seek(f1, 0, SEEK_SET);
+            await fs.seek(f2, 0, SEEK_SET);
+            await fs.seek(f3, 0, SEEK_SET);
+        }
+
+        var buffer = new Uint8Array(10 * 16);
+        async function verify_files() {
+            await reset_fds();
+
+            buffer.fill(0);
+            var bytes_read = await fs.read(f1, buffer);
+            expect(bytes_read).toBe(10 * 16);
+            for (var c of buffer)
+                expect(c).toBe(1);
+
+            buffer.fill(0);
+            var bytes_read = await fs.read(f2, buffer);
+            expect(bytes_read).toBe(10 * 16);
+            for (var c of buffer)
+                expect(c).toBe(2);
+
+            buffer.fill(0);
+            var bytes_read = await fs.read(f3, buffer);
+            expect(bytes_read).toBe(10 * 16);
+            for (var c of buffer)
+                expect(c).toBe(3);
+        }
+
+
+        await verify_files();
+
+        console.log(root.inode.direct[0], root.inode.direct[1], root.inode.indirect[0]);
+        console.log(f1.inode.direct[0], f1.inode.direct[1], f1.inode.indirect[0]);
+        console.log(f2.inode.direct[0], f2.inode.direct[1], f2.inode.indirect[0]);
+        console.log(f3.inode.direct[0], f3.inode.direct[1], f3.inode.indirect[0]);
+        async function idk(fd) {
+            console.log("---");
+            for (var i = 0; i < 10; i++) {
+                console.log(await fs.get_nth_blocknum_from_inode(fd.inode, i));
+            }
+        }
+        await idk(f1);
+        await idk(f2);
+        await idk(f3);
+
+        await fs.ioctl(null, IOCTL_DEFRAG);
+
+        console.log(root.inode.direct);
+        console.log(f1.inode.direct);
+        console.log(f2.inode.direct);
+        console.log(f3.inode.direct);
+
+        await verify_files();
+        await idk(f1);
+        await idk(f2);
+        await idk(f3);
+    });
 })

@@ -17,9 +17,16 @@ Press `reset` to reset the state of the filesystem.
 
 <div id='latency_container'>
 </div>
+<div id='cache_container' style="display:none;">
+<p id='cache_contents'></p>
+<br>
+<button onclick="increase_cache()">Increase cache size</button>
+<button onclick="decrease_cache()">Decrease cache size</button>
+</div>
 <br>
 <button onclick='setup()'>Reset</button>
-<button onclick='enable_cache()'>Enable Cache</button>
+<button id='cache_btn' onclick='enable_cache()'>Enable Cache</button>
+<button onclick='defragment()'>Defragment</button>
 <script src="{{ '/js/pages/disk_latency.js' | relative_url }}"></script>
 
 For example, try measuiring the difference between the time taken to read
@@ -30,6 +37,14 @@ See how we have to keep re-reaading the indirect block
 What if we could somehow remember the contents of that block?
 We could make use of a cache. Click `Enable cache` to turn on a basic `LRU` cache.
 
+Try playing around with the cache size to see how different cache sizes affect performance.
+In real life this cache would be taking up valuable memory space and wouldn't always be availible.
+
+You might have noticed that in this demo the disk pointer is never moving to the inode table.
+That's because we're assuming that all inodes are cached in memory.
+In reality this may not always be the case, but it's a relatively harmless assumption for our purposes.
+
+What if we didn't have a cache?
 Another solution could be to defragment the disk.
 <!-- (TODO make a way to turn of animations temporarily)-->
 The last potential solution would be to change the storage medium to something

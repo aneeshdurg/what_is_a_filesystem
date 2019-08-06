@@ -8,7 +8,10 @@ const IOCTL_SET_DISK_PTR_POS = get_unused_ioctl_num();
 
 const IOCTL_ENABLE_CACHE = get_unused_ioctl_num();
 const IOCTL_DISABLE_CACHE = get_unused_ioctl_num();
+const IOCTL_GET_CACHE_CONTENTS = get_unused_ioctl_num();
 const IOCTL_SET_CACHE_SIZE = get_unused_ioctl_num();
+
+const IOCTL_DEFRAG = get_unused_ioctl_num();
 
 class Inode {
     constructor() {
@@ -181,6 +184,22 @@ class MyFS extends DefaultFS {
 
             if (this.animations)
                 await this.animations.read_block(inode.indirect[0]);
+        }
+
+        return block_num;
+    }
+
+    async set_nth_blocknum_of_inode(inode, n, block_num) {
+        if (n < inode.num_direct) {
+            inode.direct[n] = block_num;
+        } else {
+            var indirect_index = n - inode.num_direct;
+            var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
+            var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
+            indirect_entry[0] = block_num;
+
+            if (this.animations)
+                await this.animations.read_block(inode.indirect[0], true);
         }
 
         return block_num;
@@ -666,6 +685,144 @@ class MyFS extends DefaultFS {
         return this.read_or_write(filedes, buffer, false);
     }
 
+    async get_inode_from_blocknum(block_num) {
+        for (var i = 0; i < this._inodes.length; i++) {
+            var inode = this._inodes[i];
+            if (!inode.num_links || !inode.filesize)
+                continue;
+
+            var num_blocks = Math.ceil(inode.filesize / this.block_size);
+            for (var b_idx = 0; b_idx < num_blocks; b_idx++) {
+                var block = await this.get_nth_blocknum_from_inode(inode, b_idx)
+                if (block == block_num) {
+                    return {
+                        inode: inode,
+                        inodenum: i,
+                        n: b_idx,
+                    }
+                }
+            }
+
+            console.log(
+                "    checking indirect",
+                inode.indirect[0],
+                block_num,
+                new Uint8Array(this.disk, inode.indirect[0] * this.block_size, this.block_size)
+            );
+            if (inode.indirect[0] == block_num){
+                return {
+                    inode: inode,
+                    inodenum: i,
+                    n: -1,
+                    is_indirect: true,
+                }
+            }
+        }
+
+        return null;
+    }
+
+
+    async defragment(filedes, buffer) {
+        // This is a very simple defragmentation algorithm
+        var start_idx = 0;
+        for (var i = 0; i < this._inodes.length; i++) {
+            var inode = this._inodes[i];
+            if (!inode.num_links || !inode.filesize)
+                continue;
+
+            var num_blocks = Math.ceil(inode.filesize / this.block_size);
+            async function do_defrag(j, process_indirect) {
+                var curr_block = null;
+                if (process_indirect) {
+                    curr_block = inode.indirect[0];
+                    console.log("Swapping indirect block of ", i);
+                } else {
+                    curr_block = await this.get_nth_blocknum_from_inode(inode, j);
+                    console.log("Swapping " + j + "th block of ", i);
+                    console.log("  ", inode.direct[0], inode.direct[1], inode.indirect[0]);
+                }
+
+                console.log("  Comparing", curr_block, "with", start_idx);
+                if (curr_block != start_idx) {
+                    if (!this.blockmap[start_idx]) {
+                        // copy curr_block into start_idx
+                        console.log("  free swap!");
+                        var disk_offset = curr_block * this.block_size;
+                        var src = new Uint8Array(this.disk, disk_offset, this.block_size);
+                        var disk_offset = start_idx * this.block_size;
+                        var target = new Uint8Array(this.disk, disk_offset, this.block_size);
+                        target.set(src);
+
+                        this.blockmap[curr_block] = false;
+                        if (this.animations)
+                            await this.animations.deregister_block(curr_block);
+                    } else {
+                        // swap blocks
+                        console.log("  Looking up block", start_idx);
+                        var res = await this.get_inode_from_blocknum(start_idx);
+                        var target_inode = res.inode;
+                        var target_inodenum = res.inodenum;
+                        var target_n = res.n;
+                        var target_is_indirect = res.is_indirect;
+                        if (target_is_indirect)
+                            console.log("  Swapping with indirect of " + target_inodenum + "!", res);
+                        else
+                            console.log("  Swapping with " + target_n + "th block of " + target_inodenum + "!", res);
+
+
+                        if (target_is_indirect)
+                            target_inode.indirect[0] = curr_block;
+                        else
+                            this.set_nth_blocknum_of_inode(target_inode, target_n, curr_block);
+
+                        var disk_offset = curr_block * this.block_size;
+                        var src = new Uint8Array(this.disk, disk_offset, this.block_size);
+                        var disk_offset = start_idx * this.block_size;
+                        var target = new Uint8Array(this.disk, disk_offset, this.block_size);
+
+                        var temp = new Uint8Array(new ArrayBuffer(this.block_size));
+                        console.log("target", target);
+                        console.log("src", src);
+
+                        temp.set(target);
+                        console.log("temp", temp);
+
+                        target.set(src);
+                        console.log("target", target);
+                        src.set(temp);
+                        console.log("src", src);
+
+                        if (this.animations) {
+                            await this.animations.deregister_block(curr_block);
+                            await this.animations.register_block_to_inode(target_inodenum, curr_block);
+                            await this.animations.deregister_block(start_idx);
+                        }
+
+                    }
+
+                    if (process_indirect)
+                        inode.indirect[0] = start_idx;
+                    else
+                        this.set_nth_blocknum_of_inode(inode, j, start_idx);
+
+                    if (this.animations)
+                        await this.animations.register_block_to_inode(i, start_idx);
+                }
+                start_idx++;
+            }
+
+            for (var j = 0; j < Math.min(2, num_blocks); j++)
+                await do_defrag.call(this, j);
+
+            if (num_blocks > 2) {
+                await do_defrag.call(this, -1, true);
+                for (var j = 2; j < num_blocks; j++)
+                    await do_defrag.call(this, j);
+            }
+        }
+    }
+
     async ioctl(filedes, request, obj) {
     	if (request == IOCTL_SELECT_INODE) {
         	filedes.inode.update_atim();
@@ -694,6 +851,10 @@ class MyFS extends DefaultFS {
     	} else if (request == IOCTL_SET_CACHE_SIZE) {
             this.animations.cache_size = obj.size;
             this.animations.setup_cache();
+    	} else if (request == IOCTL_GET_CACHE_CONTENTS) {
+            return this.animations.cache;
+    	} else if (request == IOCTL_DEFRAG) {
+            return this.defragment();
         } else {
     		return "EIMPL";
     	}

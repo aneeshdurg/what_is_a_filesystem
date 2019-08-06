@@ -90,13 +90,72 @@ function setup() {
         shell.reenable_container_event_listeners();
         shell_el.focus();
     })();
+
+    disable_cache({
+        target: document.getElementById('cache_btn'),
+    });
 }
 
-function enable_cache() {
+var cache_timer = null;
+var cache_size = 8;
+
+function enable_cache(e) {
     if (!fs)
         return;
 
     fs.ioctl(null, IOCTL_ENABLE_CACHE);
+
+    console.log(e);
+    var btn = e.target;
+    btn.innerText = "Disable Cache";
+    btn.onclick = disable_cache;
+
+    var container = document.getElementById('cache_container');
+    container.style.display = "";
+
+    var contents = document.getElementById('cache_contents');
+
+    cache_timer = setInterval(async () => {
+        contents.innerHTML = "Cache: [" + await fs.ioctl(null, IOCTL_GET_CACHE_CONTENTS) + "]";
+    }, 100);
+}
+
+function disable_cache(e) {
+
+    if (!fs)
+        return;
+
+    cache_size = 8;
+
+    fs.ioctl(null, IOCTL_DISABLE_CACHE);
+    fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: cache_size});
+
+    if (cache_timer) {
+        clearTimeout(cache_timer);
+        cache_timer = null;
+    }
+
+    var btn = e.target;
+    btn.innerText = "Enable Cache";
+    btn.onclick = enable_cache;
+
+    var container = document.getElementById('cache_container');
+    container.style.display = "none";
+
+    var contents = document.getElementById('cache_contents');
+    contents.innerHTML = "";
+}
+
+function increase_cache() {
+    fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: ++cache_size});
+}
+
+function decrease_cache() {
+    fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: --cache_size});
+}
+
+function defragment() {
+    fs.ioctl(null, IOCTL_DEFRAG);
 }
 
 window.addEventListener('DOMContentLoaded', setup);
