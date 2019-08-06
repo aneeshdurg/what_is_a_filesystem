@@ -1,4 +1,6 @@
 // requires fs.js
+// import * from 'fs.js'
+// import * from 'fs_helper.js'
 
 class LayeredFilesystem extends DefaultFS {
     constructor(rootfs, canvas) {

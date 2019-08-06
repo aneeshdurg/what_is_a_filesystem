@@ -22,7 +22,7 @@ You can see an example of how we implemented mounting in our simulator at this f
 
 ## Writing our own filesystem!
 
-<script src="{{ '/js/merge_memfs.js' | relative_url }}"></script>
+<script src="{{ '/js/pages/merge_memfs.js' | relative_url }}"></script>
 
 Way back in [section 3]({{ '/_pages/03-file-api.html' | relative_url }}) you wrote a mini filesystem that provided a single virtual file and implemented `read` and `write` for that file.
 Since then, you've hopefully learned a lot about how filesystems are structured and what the various callbacks provide,
