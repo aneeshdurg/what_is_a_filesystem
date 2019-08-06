@@ -703,12 +703,6 @@ class MyFS extends DefaultFS {
                 }
             }
 
-            console.log(
-                "    checking indirect",
-                inode.indirect[0],
-                block_num,
-                new Uint8Array(this.disk, inode.indirect[0] * this.block_size, this.block_size)
-            );
             if (inode.indirect[0] == block_num){
                 return {
                     inode: inode,
@@ -736,18 +730,13 @@ class MyFS extends DefaultFS {
                 var curr_block = null;
                 if (process_indirect) {
                     curr_block = inode.indirect[0];
-                    console.log("Swapping indirect block of ", i);
                 } else {
                     curr_block = await this.get_nth_blocknum_from_inode(inode, j);
-                    console.log("Swapping " + j + "th block of ", i);
-                    console.log("  ", inode.direct[0], inode.direct[1], inode.indirect[0]);
                 }
 
-                console.log("  Comparing", curr_block, "with", start_idx);
                 if (curr_block != start_idx) {
                     if (!this.blockmap[start_idx]) {
                         // copy curr_block into start_idx
-                        console.log("  free swap!");
                         var disk_offset = curr_block * this.block_size;
                         var src = new Uint8Array(this.disk, disk_offset, this.block_size);
                         var disk_offset = start_idx * this.block_size;
@@ -755,21 +744,18 @@ class MyFS extends DefaultFS {
                         target.set(src);
 
                         this.blockmap[curr_block] = false;
-                        if (this.animations)
+                        if (this.animations) {
+                            await this.animations.read_block(curr_block);
+                            await this.animations.read_block(start_idx, true);
                             await this.animations.deregister_block(curr_block);
+                        }
                     } else {
                         // swap blocks
-                        console.log("  Looking up block", start_idx);
                         var res = await this.get_inode_from_blocknum(start_idx);
                         var target_inode = res.inode;
                         var target_inodenum = res.inodenum;
                         var target_n = res.n;
                         var target_is_indirect = res.is_indirect;
-                        if (target_is_indirect)
-                            console.log("  Swapping with indirect of " + target_inodenum + "!", res);
-                        else
-                            console.log("  Swapping with " + target_n + "th block of " + target_inodenum + "!", res);
-
 
                         if (target_is_indirect)
                             target_inode.indirect[0] = curr_block;
@@ -782,18 +768,14 @@ class MyFS extends DefaultFS {
                         var target = new Uint8Array(this.disk, disk_offset, this.block_size);
 
                         var temp = new Uint8Array(new ArrayBuffer(this.block_size));
-                        console.log("target", target);
-                        console.log("src", src);
 
                         temp.set(target);
-                        console.log("temp", temp);
-
                         target.set(src);
-                        console.log("target", target);
                         src.set(temp);
-                        console.log("src", src);
 
                         if (this.animations) {
+                            await this.animations.read_block(curr_block, true);
+                            await this.animations.read_block(start_idx, true);
                             await this.animations.deregister_block(curr_block);
                             await this.animations.register_block_to_inode(target_inodenum, curr_block);
                             await this.animations.deregister_block(start_idx);

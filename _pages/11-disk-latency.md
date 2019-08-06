@@ -24,10 +24,12 @@ Press `reset` to reset the state of the filesystem.
 <button onclick="decrease_cache()">Decrease cache size</button>
 </div>
 <br>
+<div id='controls' style="display:none;">
 <button onclick='setup()'>Reset</button>
 <button id='cache_btn' onclick='enable_cache()'>Enable Cache</button>
-<button onclick='defragment()'>Defragment</button>
+<button id='defragment' onclick='defragment()'>Defragment</button>
 <script src="{{ '/js/pages/disk_latency.js' | relative_url }}"></script>
+</div>
 
 For example, try measuiring the difference between the time taken to read
 `goodfile` (`cat goodfile`) versus reading `badfile` (`cat badfile`).

@@ -125,10 +125,13 @@ class FSAnimator {
             var ptr_target = i * this.block_width;
 
             var found_in_cache = false;
-            if (!entry.is_write && this.cache_enable && (this.cache.indexOf(i) >= 0)) {
+            if (this.cache_enable && (this.cache.indexOf(i) >= 0)) {
                 found_in_cache = true;
                 this.cache = this.cache.concat(this.cache.splice(this.cache.indexOf(i), 1));
-            } else {
+            }
+
+            var needs_ptr_move = (!found_in_cache) || entry.is_write;
+            if (needs_ptr_move) {
                 var sign = ptr_target > this.ptr_pos ? 1 : -1;
                 if (this.ptr_speed)
                     this.ptr_pos += sign * Math.min(Math.abs(ptr_target - this.ptr_pos), this.ptr_speed);
@@ -136,7 +139,7 @@ class FSAnimator {
                     this.ptr_pos = ptr_target;
             }
 
-            if (!found_in_cache && this.ptr_pos != ptr_target) {
+            if (needs_ptr_move && this.ptr_pos != ptr_target) {
                 this.tasks.unshift(currtask);
                 waiting_for_disk = true;
             } else {

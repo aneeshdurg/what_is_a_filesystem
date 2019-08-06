@@ -1,6 +1,9 @@
 var fs = null;
 var shell = null;
 function setup() {
+    var controls = document.getElementById('controls');
+    controls.style.display = "none";
+
     var latency_container = document.getElementById('latency_container');
     latency_container.innerHTML = "";
     var shell_el = document.createElement('div');
@@ -88,6 +91,8 @@ function setup() {
         // Allow user interaction
         canvas_container.style.height = "";
         shell.reenable_container_event_listeners();
+
+        controls.style.display = "";
         shell_el.focus();
     })();
 
@@ -154,8 +159,15 @@ function decrease_cache() {
     fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: --cache_size});
 }
 
-function defragment() {
-    fs.ioctl(null, IOCTL_DEFRAG);
+async function defragment() {
+    var btn = document.getElementById('defragment');
+    btn.disabled = true;
+
+    shell.remove_container_event_listeners();
+    await fs.ioctl(null, IOCTL_DEFRAG);
+    shell.reenable_container_event_listeners();
+
+    btn.disabled = false;
 }
 
 window.addEventListener('DOMContentLoaded', setup);
