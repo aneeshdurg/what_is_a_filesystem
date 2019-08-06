@@ -431,7 +431,7 @@ class Shell {
         this.filesystem = fs;
         this.current_dir = "/";
         this.umask = 0o644;
-        this.prompt = (shell) => shell.current_dir + " $ ";
+        this.prompt = this.default_prompt;
         this.history = [];
         this.history_index = -1;
 
@@ -444,6 +444,15 @@ class Shell {
         this.container = null;
         this.output = null;
         this.setup_container_and_output(parent);
+    }
+
+    // immutable default_prompt
+    get default_prompt() {
+        return (shell) => shell.current_dir + " $ ";
+    }
+
+    restore_default_prompt() {
+        this.prompt = this.default_prompt;
     }
 
     /**
@@ -494,8 +503,11 @@ class Shell {
         delete this.mobile;
     }
 
-    setup_container_event_listeners() {
+    setup_container_click_listener() {
         var that = this;
+
+        if (this.click_listner)
+            this.container.removeEventListener("click", this.click_listner, false);
 
         this.click_listner = function(e) {
             if (isMobile.any()) {
@@ -504,8 +516,30 @@ class Shell {
                 }
             }
         }
-
         this.container.addEventListener("click", this.click_listner, false);
+    }
+
+    setup_container_event_listeners() {
+        var that = this;
+
+        this.click_listner = function(e) {
+            if (that.disable_events)
+                return;
+            if (isMobile.any()) {
+                if(!that.mobile) {
+                    that.setup_mobile_input();
+                }
+            }
+        }
+        this.container.addEventListener("click", this.click_listner, false);
+
+        this.disabled_click_listner = function(e) {
+            if (!that.disable_events)
+                return;
+            that.container.blur();
+            document.activeElement.blur();
+        };
+        this.container.addEventListener("click", this.disabled_click_listner, false);
 
         this.container.addEventListener("focusout", function (e) {
           if (isMobile.any()) {
@@ -550,16 +584,11 @@ class Shell {
     }
 
     remove_container_event_listeners() {
-        var that = this;
-        if (this.click_listner) {
-            this.container.removeEventListener("click", this.click_listner, false);
-            this.container.addEventListener("click", function(e) {
-                that.container.blur();
-                document.activeElement.blur();
-            }, false);
-        }
-
         this.disable_events = true;
+    }
+
+    reenable_container_event_listeners() {
+        this.disable_events = false;
     }
 
     simulate_input(input) {

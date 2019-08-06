@@ -1,4 +1,15 @@
 const IOCTL_SET_ANIMATION_DURATION = get_unused_ioctl_num();
+const IOCTL_RESET_ANIMATION_DURATION = get_unused_ioctl_num();
+
+const IOCTL_SET_DISK_PTR_SPEED = get_unused_ioctl_num();
+const IOCTL_ENABLE_DISK_PTR = get_unused_ioctl_num();
+const IOCTL_DISABLE_DISK_PTR = get_unused_ioctl_num();
+const IOCTL_SET_DISK_PTR_POS = get_unused_ioctl_num();
+
+const IOCTL_ENABLE_CACHE = get_unused_ioctl_num();
+const IOCTL_DISABLE_CACHE = get_unused_ioctl_num();
+const IOCTL_SET_CACHE_SIZE = get_unused_ioctl_num();
+
 class Inode {
     constructor() {
         this.num_direct = 2;
@@ -567,18 +578,18 @@ class MyFS extends DefaultFS {
         return added_blocks;
     }
 
-    async read_or_write(filedes, buffer, is_read) {
+    async read_or_write(filedes, buffer, is_write) {
         if (buffer.BYTES_PER_ELEMENT != 1)
             return "EINVAL";
 
-        if (is_read && !(filedes.mode & O_RDONLY))
+        if (!is_write && !(filedes.mode & O_RDONLY))
             return "EBADF";
-        else if (!is_read && !(filedes.mode & O_WRONLY))
+        else if (is_write && !(filedes.mode & O_WRONLY))
             return "EBADF"
 
         var total_bytes = buffer.length;
         var final_filesize = null;
-        if (!is_read) {
+        if (is_write) {
             final_filesize = Math.max(filedes.inode.filesize, total_bytes + filedes.offset);
             if (final_filesize > this.max_filesize)
                 return "ENOSPC";
@@ -605,7 +616,7 @@ class MyFS extends DefaultFS {
                 await this.animations.read_block(block);
 
             for (var i = 0; i < bytes_to_process; i++) {
-                if (is_read)
+                if (!is_write)
                     buffer[i + bytes_written] = target[i];
                 else
                     target[i] = buffer[i + bytes_written];
@@ -625,7 +636,7 @@ class MyFS extends DefaultFS {
                 await this.animations.read_block(block);
 
             for (var i = 0; i < bytes_to_process; i++) {
-                if (is_read)
+                if (!is_write)
                     buffer[i + bytes_written] = target[i];
                 else
                     target[i] = buffer[i + bytes_written];
@@ -637,22 +648,22 @@ class MyFS extends DefaultFS {
         }
 
         filedes.offset += bytes_written;
-        if (!is_read)
+        if (is_write)
             filedes.inode.filesize = final_filesize;
 
         filedes.inode.update_atim();
-        if (!is_read)
+        if (is_write)
             filedes.inode.update_mtim();
 
         return bytes_written;
     }
 
     async write(filedes, buffer) {
-        return this.read_or_write(filedes, buffer, false);
+        return this.read_or_write(filedes, buffer, true);
     }
 
     async read(filedes, buffer) {
-        return this.read_or_write(filedes, buffer, true);
+        return this.read_or_write(filedes, buffer, false);
     }
 
     async ioctl(filedes, request, obj) {
@@ -665,7 +676,25 @@ class MyFS extends DefaultFS {
     			this.animations.save_duration(obj.duration);
     		else
     			this.animations.set_duration(obj.duration);
-    	} else {
+    	} else if (request == IOCTL_RESET_ANIMATION_DURATION) {
+            this.animations.reload_duration();
+    	} else if (request == IOCTL_SET_DISK_PTR_SPEED) {
+            this.animations.set_ptr_speed(obj.speed);
+    	} else if (request == IOCTL_ENABLE_DISK_PTR) {
+            this.animations.show_ptr = true;
+    	} else if (request == IOCTL_DISABLE_DISK_PTR) {
+            this.animations.show_ptr = false;
+    	} else if (request == IOCTL_SET_DISK_PTR_POS) {
+            this.animations.ptr_pos = obj.pos;
+    	} else if (request == IOCTL_ENABLE_CACHE) {
+            this.animations.cache_enable = true;
+            this.animations.setup_cache();
+    	} else if (request == IOCTL_DISABLE_CACHE) {
+            this.animations.cache_enable = false;
+    	} else if (request == IOCTL_SET_CACHE_SIZE) {
+            this.animations.cache_size = obj.size;
+            this.animations.setup_cache();
+        } else {
     		return "EIMPL";
     	}
 

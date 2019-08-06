@@ -5,6 +5,17 @@ class Task{
     }
 }
 
+class ReadTask extends Task {
+    constructor(resolve, blocknum, is_write) {
+        super(resolve, function() {
+            this.reading_blocks.push({
+                blocknum: blocknum,
+                is_write: is_write,
+            });
+        });
+    }
+}
+
 class FSAnimator {
     constructor(fs, canvas, block_limit) {
         this.canvas = canvas;
@@ -26,11 +37,31 @@ class FSAnimator {
 
         this.reading_blocks = [];
 
+        this.show_ptr = false;
+        this.ptr_pos = 0;
+        this.ptr_speed = 0;
+
+        this.cache_enable = false;
+        this.cache_size = 8;
+        this.cache = [];
+        this.cache_policy = null; // TODO allow changing the cache policy (currently LRU)
+        this.setup_cache();
+
         this.selected_inode = null;
 
         this.duration = null;
         this.timer = null;
         this.reload_duration();
+    }
+
+    setup_cache() {
+        this.cache = [];
+        for (let i = 0; i < this.cache_size; i++)
+            this.cache.push(0);
+    }
+
+    set_ptr_speed(speed) {
+        this.ptr_speed = speed * this.block_width;
     }
 
     set_duration(duration) {
@@ -43,7 +74,7 @@ class FSAnimator {
         var that = this;
         if (this.duration > 0)
           this.timer = setInterval(() => { that.draw() }, this.duration);
-    };
+    }
 
     save_duration(duration) {
         this.set_duration(duration);
@@ -52,7 +83,7 @@ class FSAnimator {
 
     reload_duration() {
         this.set_duration(Number(localStorage.getItem("ANIMATOR_DURATION")) || 100);
-    };
+    }
 
     draw() {
         var currtask = null;
@@ -61,7 +92,7 @@ class FSAnimator {
             currtask.callback.call(this);
         }
 
-      this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
+      this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
         for (var i = 0; i < this.fs.num_inodes; i++) {
             this.ctx.beginPath();
             this.ctx.rect(i * this.inode_width, 0, this.inode_width, this.ctx.canvas.height / 2);
@@ -87,27 +118,75 @@ class FSAnimator {
             this.ctx.stroke();
         }
 
-        while (this.reading_blocks.length) {
-            var i = this.reading_blocks.shift();
-            this.ctx.globalAlpha = 0.2;
-            this.ctx.beginPath();
-            this.ctx.rect(i * this.block_width, 0, this.block_width, this.ctx.canvas.height / 2);
-            if (this.registered_blocks[i] != null) {
-                this.ctx.fillStyle = "black";
-                this.ctx.fill();
+        let waiting_for_disk = false;
+        if (this.reading_blocks.length) {
+            var entry = this.reading_blocks.shift();
+            var i = entry.blocknum;
+            var ptr_target = i * this.block_width;
+
+            var found_in_cache = false;
+            if (!entry.is_write && this.cache_enable && (this.cache.indexOf(i) >= 0)) {
+                found_in_cache = true;
+                this.cache = this.cache.concat(this.cache.splice(this.cache.indexOf(i), 1));
+            } else {
+                var sign = ptr_target > this.ptr_pos ? 1 : -1;
+                if (this.ptr_speed)
+                    this.ptr_pos += sign * Math.min(Math.abs(ptr_target - this.ptr_pos), this.ptr_speed);
+                else
+                    this.ptr_pos = ptr_target;
             }
-            this.ctx.globalAlpha = 1;
-            this.ctx.stroke();
+
+            if (!found_in_cache && this.ptr_pos != ptr_target) {
+                this.tasks.unshift(currtask);
+                waiting_for_disk = true;
+            } else {
+                if (this.cache_enable && !found_in_cache) {
+                    this.cache.shift();
+                    this.cache.push(i);
+                }
+                this.ctx.beginPath();
+                this.ctx.globalAlpha = 0.2;
+                this.ctx.rect(i * this.block_width, 0, this.block_width, this.ctx.canvas.height / 2);
+                if (this.registered_blocks[i] != null) {
+                    this.ctx.fillStyle = "black";
+                    this.ctx.fill();
+                }
+                this.ctx.stroke();
+                this.ctx.globalAlpha = 1;
+            }
+
+            this.draw_ptr();
         }
+
+        this.draw_ptr();
 
         this.ctx.translate(-1 * this.canvas.width * this.inode_space, 0);
 
         this.draw_selected_inode();
 
-        if (currtask) {
+        if (currtask && !waiting_for_disk) {
             currtask.resolve();
         }
-    };
+    }
+
+    draw_ptr() {
+        if (!this.show_ptr)
+            return;
+
+        this.ctx.fillStyle = "white";
+
+        this.ctx.beginPath();
+        this.ctx.rect(this.ptr_pos - this.block_width/2, 0, this.block_width * 2, 20); // disk ptr
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.ptr_pos, 20);
+        this.ctx.lineTo(this.ptr_pos +  this.block_width, 20);
+        this.ctx.lineTo(this.ptr_pos + 0.5 * this.block_width, 25);
+        this.ctx.fill();
+        this.ctx.closePath();
+    }
 
     async submitTask(callback){
         var promise_collector = []
@@ -117,36 +196,42 @@ class FSAnimator {
         var task = new Task(promise_collector[0], callback);
         this.tasks.push(task);
         return p;
-    };
+    }
 
-    async read_block(blocknum){
-       function callback() {
-            this.reading_blocks.push(blocknum);
-        }
-        var p = this.submitTask(callback);
-        await p;
-    };
+    async submitReadTask(blocknum, is_write){
+        var promise_collector = []
+        var p = new Promise(resolve => promise_collector.push(resolve));
+        while (promise_collector.length == 0) {};
+
+        var task = new ReadTask(promise_collector[0], blocknum, is_write);
+        this.tasks.push(task);
+        return p;
+    }
+
+    async read_block(blocknum, is_write){
+        await this.submitReadTask(blocknum, is_write);
+    }
 
     async register_block_to_inode(inodenum, blocknum){
         function callback() {
             this.registered_blocks[blocknum] = inodenum;
         }
         await this.submitTask(callback);
-    };
+    }
 
     async deregister_block(blocknum){
         function callback(){
             this.registered_blocks[blocknum] = null;
         }
         await this.submitTask(callback);
-    };
+    }
 
     async deregister_inode(inodenum){
         function callback(){
             this.registered_inodes[inodenum] = null;
         }
         await this.submitTask(callback);
-    };
+    }
 
     // https://stackoverflow.com/questions/1484506/random-color-generator
     getRandomColor() {
@@ -165,14 +250,14 @@ class FSAnimator {
         }
         var p = this.submitTask(callback);
         await p;
-    };
+    }
 
     select_inode(inodenum, inode){
         this.selected_inode = {
             inodenum: inodenum,
             inode: inode,
-        };
-    };
+        }
+    }
 
     // https://stackoverflow.com/a/6333775/5803067
     canvas_arrow(context, fromx, fromy, tox, toy){
@@ -194,7 +279,6 @@ class FSAnimator {
         var inodenum = this.selected_inode.inodenum;
         var inode = this.selected_inode.inode;
 
-        console.log("Selected " + (new Error()).stack);
         this.ctx.translate(0, this.ctx.canvas.height / 2);
         this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height / 2);
         this.ctx.beginPath();
