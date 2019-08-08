@@ -3,8 +3,6 @@ layout: post
 title: "Disk Latency"
 ---
 
-## Disk Latency
-
 Up till now we've assumed that we can jump around the disk for free.
 In the real world this assumption doesn't hold up for all storage mediums.
 For many technologies, such as HDDs that rely on spinning disks, there is a cost to non-sequential access.

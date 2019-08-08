@@ -48,8 +48,6 @@ class Inode {
     }
 }
 
-// Paths cannot have trailing / or // anywhere
-// max filename length = 15
 class MyFS extends DefaultFS {
     constructor(canvas) {
         super();
@@ -83,7 +81,15 @@ class MyFS extends DefaultFS {
         }
     }
 
-    get_new_block(block) {
+    // Block management functions
+
+    /**
+     * Get the next availible block and mark it at used
+     *
+     * On success returns the number of the new block
+     * On failure returns a string
+     */
+    get_new_block() {
         var found_block = -1;
         for (var i = 0; i < this.blockmap.length; i++) {
             if (!this.blockmap[i]) {
@@ -99,6 +105,9 @@ class MyFS extends DefaultFS {
         return found_block;
     }
 
+    /**
+     * Release the block whose number is `block`
+     */
     async release_block(block) {
         this.blockmap[block] = false;
 
@@ -106,6 +115,13 @@ class MyFS extends DefaultFS {
             await this.animations.deregister_block(block);
     }
 
+    /**
+     * Ensure that an inode has at least `blockcount` nodes.
+     * If it doesn't, add blocks until it does.
+     *
+     * On success returns the number of blocks added
+     * On failure returns a string
+     */
     async ensure_min_blockcount(inode, blockcount) {
 
         var inodenum = this._inodes.findIndex((x) => x == inode);
@@ -159,6 +175,12 @@ class MyFS extends DefaultFS {
         return added_blocks;
     }
 
+    /**
+     * Appends a single block to an inode
+     *
+     * On success returns the block number of the newly added block
+     * On failure returns a string
+     */
     async append_block_to_inode(inode) {
         var curr_block = Math.floor(inode.filesize / this.block_size);
         if ((inode.filesize % this.block_size) == 0)
@@ -170,6 +192,9 @@ class MyFS extends DefaultFS {
         return new_blocks[0];
     }
 
+    /**
+     * Removes all blocks of an inode
+     */
     async empty_inode(inodenum) {
         var had_indirect = false;
         var blocknum = 0;
@@ -190,8 +215,16 @@ class MyFS extends DefaultFS {
             await this.release_block(this._inodes[inodenum].indirect[0]);
     }
 
+    /**
+     * Returns a Uint8Array view of the block at `blocknum`.
+     *
+     * If `offset` is set, an offset into the block will be used. `offset` must be less than the length of the block.
+     * The default is 0.
+     *
+     * If `length` is set it is the length of the block to be added to the view.  `length` must be less than
+     * `block_size - offset`.  By default it is `block_size - offset`.
+     */
     get_disk_block_view_from_block_num(blocknum, offset, length) {
-        // offset must be less than this.block_size
         offset = offset || 0;
         length = typeof(length) == 'number' ? length : this.block_size - offset;
         var disk_offset = blocknum * this.block_size;
@@ -199,10 +232,19 @@ class MyFS extends DefaultFS {
         return disk_view;
     }
 
+    /**
+     * Returns a Uint8Array view of a dirent in a block
+     */
     get_dirent_view_from_blocknum(blocknum, offset) {
         return this.get_disk_block_view_from_block_num(blocknum, offset, this.dirent_size);
     }
 
+    /**
+     * Given a file name returns the corresponding inode
+     *
+     * On success returns the corresponding inode
+     * On failure returns a string
+     */
     async inode_of(file){
         if (file == "/")
             return 0;
@@ -217,7 +259,10 @@ class MyFS extends DefaultFS {
         return "ENOENT";
     }
 
-    // Undefined if the inode doesn't actually have n blocks.
+    /**
+     * Returns the nth block of an inode
+     * Undefined if the inode doesn't actually have n blocks.
+     */
     async get_nth_blocknum_from_inode(inode, n) {
         var block_num = 0;
         if (n < inode.num_direct) {
@@ -234,6 +279,11 @@ class MyFS extends DefaultFS {
         return block_num;
     }
 
+    /**
+     * Sets the `n`th block of the inode `inode` to be `block_num`.
+     *
+     * Undefined if the inode doesn't have a filesize indicating it has at least `n` blocks.
+     */
     async set_nth_blocknum_of_inode(inode, n, block_num) {
         if (n < inode.num_direct) {
             inode.direct[n] = block_num;
@@ -716,6 +766,9 @@ class MyFS extends DefaultFS {
         return null;
     }
 
+    /**
+     * Defragment the disk
+     */
     async defragment(filedes, buffer) {
         // This is a very simple defragmentation algorithm
         var start_idx = 0;

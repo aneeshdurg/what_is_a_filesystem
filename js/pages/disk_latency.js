@@ -1,5 +1,6 @@
 var fs = null;
 var shell = null;
+
 function setup() {
     var controls = document.getElementById('controls');
     controls.style.display = "none";
@@ -26,6 +27,7 @@ function setup() {
         save: false,
     });
 
+    // Setup a shell
     shell = new Shell(new LayeredFilesystem(fs), shell_el);
     shell.remove_container_event_listeners();
     shell.prompt = function () { return "\n\n"; };
@@ -47,6 +49,7 @@ function setup() {
             await shell.run_command(new Command("truncate tempfile " + n));
         }
 
+        // Set up a file that is not sequential on disk
         await b(16);
         await t(8 * 16);
         await b(32);
@@ -96,18 +99,24 @@ function setup() {
         shell_el.focus();
     })();
 
+    // Invoke the disable cache event handler
     disable_cache({
         target: document.getElementById('cache_btn'),
     });
 }
 
+function if_fs(fn) {
+    return function() {
+        if (!fs)
+            return;
+        return fn.apply(null, arguments);
+    }
+}
+
 var cache_timer = null;
 var cache_size = 8;
 
-function enable_cache(e) {
-    if (!fs)
-        return;
-
+var enable_cache = if_fs(function (e) {
     fs.ioctl(null, IOCTL_ENABLE_CACHE);
 
     console.log(e);
@@ -123,13 +132,9 @@ function enable_cache(e) {
     cache_timer = setInterval(async () => {
         contents.innerHTML = "Cache: [" + await fs.ioctl(null, IOCTL_GET_CACHE_CONTENTS) + "]";
     }, 100);
-}
+});
 
-function disable_cache(e) {
-
-    if (!fs)
-        return;
-
+var disable_cache = if_fs(function (e) {
     cache_size = 8;
 
     fs.ioctl(null, IOCTL_DISABLE_CACHE);
@@ -149,17 +154,17 @@ function disable_cache(e) {
 
     var contents = document.getElementById('cache_contents');
     contents.innerHTML = "";
-}
+});
 
-function increase_cache() {
+var increase_cache = if_fs(function () {
     fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: ++cache_size});
-}
+});
 
-function decrease_cache() {
+var decrease_cache = if_fs(function () {
     fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: --cache_size});
-}
+});
 
-async function defragment() {
+var defragment = if_fs(async function () {
     var btn = document.getElementById('defragment');
     btn.disabled = true;
 
@@ -168,6 +173,6 @@ async function defragment() {
     shell.reenable_container_event_listeners();
 
     btn.disabled = false;
-}
+});
 
 window.addEventListener('DOMContentLoaded', setup);
