@@ -83,6 +83,172 @@ class MyFS extends DefaultFS {
         }
     }
 
+    get_new_block(block) {
+        var found_block = -1;
+        for (var i = 0; i < this.blockmap.length; i++) {
+            if (!this.blockmap[i]) {
+                found_block = i;
+                break;
+            }
+        }
+
+        if (found_block == -1)
+            return "ENOSPC";
+
+        this.blockmap[found_block] = true;
+        return found_block;
+    }
+
+    async release_block(block) {
+        this.blockmap[block] = false;
+
+        if (this.animations)
+            await this.animations.deregister_block(block);
+    }
+
+    async ensure_min_blockcount(inode, blockcount) {
+
+        var inodenum = this._inodes.findIndex((x) => x == inode);
+
+        var currblocks = Math.ceil(inode.filesize / this.block_size);
+
+        var added_blocks = [];
+        var blocks_to_add = blockcount - currblocks;
+        if (blocks_to_add <= 0)
+            return added_blocks;
+
+        var needs_indirect = false;
+        var total_disk_blocks_needed = blocks_to_add;
+        // increment if we're also adding an indrect block
+        if (currblocks == inode.num_direct) {
+            needs_indirect = true;
+            total_disk_blocks_needed++;
+        }
+
+        var free_blocks = this.blockmap.map((x) => !x).reduce((x, y) => x + y);
+        if (total_disk_blocks_needed > free_blocks)
+            return "ENOSPC";
+
+        var initialized_indirect = (currblocks > inode.num_direct);
+        while (blocks_to_add) {
+            var new_block = this.get_new_block();
+            if (currblocks < inode.num_direct) {
+                inode.direct[currblocks] = new_block;
+            } else {
+                if (!initialized_indirect) {
+                    inode.indirect[0] = this.get_new_block();
+                    if (this.animations)
+                        await this.animations.register_block_to_inode(inodenum, inode.indirect[0]);
+                    initialized_indirect = true;
+                }
+
+                if (this.animations)
+                    await this.animations.read_block(inode.indirect[0]);
+
+                var indirect_index = currblocks - inode.num_direct;
+                this.get_disk_block_view_from_block_num(inode.indirect[0])[indirect_index] = new_block;
+            }
+            added_blocks.push(new_block);
+            if (this.animations)
+                await this.animations.register_block_to_inode(inodenum, new_block);
+
+            currblocks++;
+            blocks_to_add--;
+        }
+
+        return added_blocks;
+    }
+
+    async append_block_to_inode(inode) {
+        var curr_block = Math.floor(inode.filesize / this.block_size);
+        if ((inode.filesize % this.block_size) == 0)
+            curr_block++;
+        var new_blocks = await this.ensure_min_blockcount(inode, curr_block);
+        if (typeof(new_blocks) === 'string')
+            return new_blocks;
+
+        return new_blocks[0];
+    }
+
+    async empty_inode(inodenum) {
+        var had_indirect = false;
+        var blocknum = 0;
+        while (this._inodes[inodenum].filesize > 0) {
+            if (blocknum < this._inodes[inodenum].num_direct) {
+                await this.release_block(this._inodes[inodenum].direct[blocknum]);
+            } else {
+                had_indirect = true;
+                var indirect_block = this._inodes[inodenum].indirect[0];
+                var indirect_index = blocknum - this._inodes[inodenum].num_direct;
+                await this.release_block(this.get_disk_block_view_from_block_num(indirect_block)[indirect_index]);
+            }
+            this._inodes[inodenum].filesize -= Math.min(this._inodes[inodenum].filesize, this.block_size);
+            blocknum++;
+        }
+
+        if (had_indirect)
+            await this.release_block(this._inodes[inodenum].indirect[0]);
+    }
+
+    get_disk_block_view_from_block_num(blocknum, offset, length) {
+        // offset must be less than this.block_size
+        offset = offset || 0;
+        length = typeof(length) == 'number' ? length : this.block_size - offset;
+        var disk_offset = blocknum * this.block_size;
+        var disk_view = new Uint8Array(this.disk, disk_offset + offset, length);
+        return disk_view;
+    }
+
+    get_dirent_view_from_blocknum(blocknum, offset) {
+        return this.get_disk_block_view_from_block_num(blocknum, offset, this.dirent_size);
+    }
+
+    async inode_of(file){
+        if (file == "/")
+            return 0;
+
+        var split_filename = split_parent_of(file);
+        var entries = await this.readdir(split_filename[0]);
+        for (var i = 0; i < entries.length; i++) {
+            if (entries[i].filename == split_filename[1]) {
+                return entries[i].inodenum;
+            }
+        }
+        return "ENOENT";
+    }
+
+    // Undefined if the inode doesn't actually have n blocks.
+    async get_nth_blocknum_from_inode(inode, n) {
+        var block_num = 0;
+        if (n < inode.num_direct) {
+            block_num = inode.direct[n];
+        } else {
+            var indirect_index = n - inode.num_direct;
+            var indirect_view = this.get_disk_block_view_from_block_num(inode.indirect[0]);
+            block_num = indirect_view[indirect_index];
+
+            if (this.animations)
+                await this.animations.read_block(inode.indirect[0]);
+        }
+
+        return block_num;
+    }
+
+    async set_nth_blocknum_of_inode(inode, n, block_num) {
+        if (n < inode.num_direct) {
+            inode.direct[n] = block_num;
+        } else {
+            var indirect_index = n - inode.num_direct;
+            var indirect_view = this.get_disk_block_view_from_block_num(inode.indirect[0]);
+            indirect_view[indirect_index] = block_num;
+
+            if (this.animations)
+                await this.animations.read_block(inode.indirect[0], true);
+        }
+
+        return block_num;
+    }
+
     async readdir(path) {
         var path_arr = path.split('/');
         path_arr[0] = '/';
@@ -139,20 +305,6 @@ class MyFS extends DefaultFS {
         return dir_contents;
     }
 
-    async inode_of(file){
-        if (file == "/")
-            return 0;
-
-        var split_filename = split_parent_of(file);
-        var entries = await this.readdir(split_filename[0]);
-        for (var i = 0; i < entries.length; i++) {
-            if (entries[i].filename == split_filename[1]) {
-                return entries[i].inodenum;
-            }
-        }
-        return "ENOENT";
-    }
-
     async stat(file) {
         var inodenum = await this.inode_of(file);
         if (typeof(inodenum) === 'string')
@@ -169,40 +321,6 @@ class MyFS extends DefaultFS {
             inode.mtim,
             inode.ctim);
         return info;
-    }
-
-    // Undefined if the inode doesn't actually have n blocks.
-    async get_nth_blocknum_from_inode(inode, n) {
-        var block_num = 0;
-        if (n < inode.num_direct) {
-            block_num = inode.direct[n];
-        } else {
-            var indirect_index = n - inode.num_direct;
-            var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
-            var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
-            block_num = indirect_entry[0];
-
-            if (this.animations)
-                await this.animations.read_block(inode.indirect[0]);
-        }
-
-        return block_num;
-    }
-
-    async set_nth_blocknum_of_inode(inode, n, block_num) {
-        if (n < inode.num_direct) {
-            inode.direct[n] = block_num;
-        } else {
-            var indirect_index = n - inode.num_direct;
-            var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
-            var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
-            indirect_entry[0] = block_num;
-
-            if (this.animations)
-                await this.animations.read_block(inode.indirect[0], true);
-        }
-
-        return block_num;
     }
 
     async unlink(path) {
@@ -239,23 +357,23 @@ class MyFS extends DefaultFS {
         // This loop is gauranteed to find the inode since the case where the file
         // does not exist is handled in the inode_of call above.
         var currblock = 0;
+        var block_num = -1;
         var num_blocks = Math.floor(parent_inode.filesize / this.dirent_size);
         while (currblock < num_blocks) {
-            var block_num = await this.get_nth_blocknum_from_inode(parent_inode, currblock);
+            block_num = await this.get_nth_blocknum_from_inode(parent_inode, currblock);
             var disk_offset = block_num * this.block_size;
-            if (this.animations)
-                await this.animations.read_block(block_num);
 
-            var inode_of_dirent = new Uint8Array(this.disk, disk_offset, 1);
-            if (inode_of_dirent[0] == inodenum)
+            var inode_of_dirent = this.get_disk_block_view_from_block_num(block_num)[0];
+            if (inode_of_dirent == inodenum)
                 break;
+
+            if (this.animations)
+                await this.animations.read_block(block_num, true);
 
             currblock++;
         }
 
-        // Erase currblock
-        var disk_offset = await this.get_nth_blocknum_from_inode(parent_inode, currblock) * this.block_size;
-        var dirent_block = new Uint8Array(this.disk, disk_offset, this.dirent_size);
+        var dirent_block = this.get_dirent_view_from_blocknum(block_num, 0);
         dirent_block.fill(0);
 
         // Now we have to move all blocks after the current one back by 1 block
@@ -268,12 +386,12 @@ class MyFS extends DefaultFS {
             var prevblock_offset = prevblock_num * this.block_size;
             var currblock_offset = currblock_num * this.block_size;
 
-            var prevdirent = new Uint8Array(this.disk, prevblock_offset, this.dirent_size);
-            var currdirent = new Uint8Array(this.disk, currblock_offset, this.dirent_size);
+            var prevdirent = this.get_dirent_view_from_blocknum(prevblock_num, 0);
+            var currdirent = this.get_dirent_view_from_blocknum(currblock_num, 0);
 
             if (this.animations) {
                 await this.animations.read_block(currblock_num);
-                await this.animations.read_block(prevblock_num);
+                await this.animations.read_block(prevblock_num, true);
             }
 
 
@@ -292,40 +410,6 @@ class MyFS extends DefaultFS {
 
         parent_inode.filesize -= this.block_size;
         return 0;
-    }
-
-     get_new_block(block) {
-        var found_block = -1;
-        for (var i = 0; i < this.blockmap.length; i++) {
-            if (!this.blockmap[i]) {
-                found_block = i;
-                break;
-            }
-        }
-
-        if (found_block == -1)
-            return "ENOSPC";
-
-        this.blockmap[found_block] = true;
-        return found_block;
-    }
-
-    async release_block(block) {
-        this.blockmap[block] = false;
-
-        if (this.animations)
-            await this.animations.deregister_block(block);
-    }
-
-    async append_block_to_inode(inode) {
-        var curr_block = Math.floor(inode.filesize / this.block_size);
-        if ((inode.filesize % this.block_size) == 0)
-            curr_block++;
-        var new_blocks = await this.ensure_min_blockcount(inode, curr_block);
-        if (typeof(new_blocks) === 'string')
-            return new_blocks;
-
-        return new_blocks[0];
     }
 
     async create(filename, mode, inode) {
@@ -440,30 +524,6 @@ class MyFS extends DefaultFS {
         return 0;
     }
 
-    async empty_inode(inodenum) {
-        var had_indirect = false;
-        var blocknum = 0;
-        while (this._inodes[inodenum].filesize > 0) {
-            if (blocknum < this._inodes[inodenum].num_direct) {
-                await this.release_block(this._inodes[inodenum].direct[blocknum]);
-            } else {
-                had_indirect = true;
-                var indirect_block = this._inodes[inodenum].indirect[0];
-
-                var indirect_index = blocknum - this._inodes[inodenum].num_direct;
-                var disk_offset = indirect_block * this.block_size + indirect_index;
-
-                var indirect_entry = new Uint8Array(this.disk, disk_offset, 1);
-                await this.release_block(indirect_entry[0]);
-            }
-            this._inodes[inodenum].filesize -= Math.min(this._inodes[inodenum].filesize, this.block_size);
-            blocknum++;
-        }
-
-        if (had_indirect)
-            await this.release_block(this._inodes[inodenum].indirect[0]);
-    }
-
     async open(filename, flags, mode) {
         // TODO check permissions
         var inodenum = null;
@@ -538,65 +598,6 @@ class MyFS extends DefaultFS {
         return new_inode;
     }
 
-    async ensure_min_blockcount(inode, blockcount) {
-
-        var inodenum = this._inodes.findIndex((x) => x == inode);
-
-        var currblocks = Math.ceil(inode.filesize / this.block_size);
-
-        var added_blocks = [];
-        var blocks_to_add = blockcount - currblocks;
-        if (blocks_to_add <= 0)
-            return added_blocks;
-
-        var needs_indirect = false;
-        var total_disk_blocks_needed = blocks_to_add;
-        // increment if we're also adding an indrect block
-        if (currblocks == inode.num_direct) {
-            needs_indirect = true;
-            total_disk_blocks_needed++;
-        }
-
-        var free_blocks = this.blockmap.map((x) => !x).reduce((x, y) => x + y);
-        if (total_disk_blocks_needed > free_blocks)
-            return "ENOSPC";
-
-        var initialized_indirect = (currblocks > inode.num_direct);
-        while (blocks_to_add) {
-            if (currblocks < inode.num_direct) {
-                var new_block = this.get_new_block();
-                inode.direct[currblocks] = new_block;
-                added_blocks.push(new_block);
-                if (this.animations)
-                    await this.animations.register_block_to_inode(inodenum, new_block);
-
-            } else {
-                if (!initialized_indirect) {
-                    inode.indirect[0] = this.get_new_block();
-                    if (this.animations)
-                        await this.animations.register_block_to_inode(inodenum, inode.indirect[0]);
-                    initialized_indirect = true;
-                }
-
-                var indirect_index = currblocks - inode.num_direct;
-                var disk_offset = inode.indirect[0] * this.block_size + indirect_index;
-                var curr_entry = new Uint8Array(this.disk, disk_offset, 1);
-                if (this.animations)
-                    await this.animations.read_block(inode.indirect[0]);
-
-                curr_entry[0] = this.get_new_block();
-                added_blocks.push(curr_entry[0]);
-                if (this.animations)
-                    await this.animations.register_block_to_inode(inodenum, curr_entry[0]);
-            }
-
-            currblocks++;
-            blocks_to_add--;
-        }
-
-        return added_blocks;
-    }
-
     async read_or_write(filedes, buffer, is_write) {
         if (buffer.BYTES_PER_ELEMENT != 1)
             return "EINVAL";
@@ -629,8 +630,8 @@ class MyFS extends DefaultFS {
         if (blockoffset) {
             var block = await this.get_nth_blocknum_from_inode(filedes.inode, currblock);
             var bytes_to_process = Math.min(this.block_size - blockoffset, total_bytes);
-            var disk_offset = block * this.block_size + blockoffset;
-            var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
+            var target = this.get_disk_block_view_from_block_num(block, blockoffset, bytes_to_process);
+
             if (this.animations)
                 await this.animations.read_block(block);
 
@@ -649,8 +650,7 @@ class MyFS extends DefaultFS {
         while (total_bytes) {
             var block = await this.get_nth_blocknum_from_inode(filedes.inode, currblock);
             var bytes_to_process = Math.min(this.block_size, total_bytes);
-            var disk_offset = block * this.block_size;
-            var target = new Uint8Array(this.disk, disk_offset, bytes_to_process);
+            var target = this.get_disk_block_view_from_block_num(block, 0, bytes_to_process);
             if (this.animations)
                 await this.animations.read_block(block);
 
@@ -685,7 +685,7 @@ class MyFS extends DefaultFS {
         return this.read_or_write(filedes, buffer, false);
     }
 
-    async get_inode_from_blocknum(block_num) {
+    async _get_inode_from_blocknum(block_num) {
         for (var i = 0; i < this._inodes.length; i++) {
             var inode = this._inodes[i];
             if (!inode.num_links || !inode.filesize)
@@ -716,7 +716,6 @@ class MyFS extends DefaultFS {
         return null;
     }
 
-
     async defragment(filedes, buffer) {
         // This is a very simple defragmentation algorithm
         var start_idx = 0;
@@ -736,13 +735,13 @@ class MyFS extends DefaultFS {
 
                 if (curr_block != start_idx) {
                     if (!this.blockmap[start_idx]) {
-                        // copy curr_block into start_idx
-                        var disk_offset = curr_block * this.block_size;
-                        var src = new Uint8Array(this.disk, disk_offset, this.block_size);
-                        var disk_offset = start_idx * this.block_size;
-                        var target = new Uint8Array(this.disk, disk_offset, this.block_size);
-                        target.set(src);
+                        // There's nothing in this block - we can use it
+                        var src = this.get_disk_block_view_from_block_num(curr_block);
+                        var target = this.get_disk_block_view_from_block_num(start_idx);
 
+                        //Copy src into target
+                        target.set(src);
+                        // mark block as used
                         this.blockmap[curr_block] = false;
                         if (this.animations) {
                             await this.animations.read_block(curr_block);
@@ -751,22 +750,17 @@ class MyFS extends DefaultFS {
                         }
                     } else {
                         // swap blocks
-                        var res = await this.get_inode_from_blocknum(start_idx);
-                        var target_inode = res.inode;
-                        var target_inodenum = res.inodenum;
-                        var target_n = res.n;
-                        var target_is_indirect = res.is_indirect;
+                        var target_res = await this._get_inode_from_blocknum(start_idx);
 
-                        if (target_is_indirect)
-                            target_inode.indirect[0] = curr_block;
+                        if (target_res.is_indirect)
+                            target_res.inode.indirect[0] = curr_block;
                         else
-                            this.set_nth_blocknum_of_inode(target_inode, target_n, curr_block);
+                            this.set_nth_blocknum_of_inode(target_res.inode, target_res.n, curr_block);
 
-                        var disk_offset = curr_block * this.block_size;
-                        var src = new Uint8Array(this.disk, disk_offset, this.block_size);
-                        var disk_offset = start_idx * this.block_size;
-                        var target = new Uint8Array(this.disk, disk_offset, this.block_size);
+                        var src = this.get_disk_block_view_from_block_num(curr_block);
+                        var target = this.get_disk_block_view_from_block_num(start_idx);
 
+                        // TODO use a free disk block instead of memory?
                         var temp = new Uint8Array(new ArrayBuffer(this.block_size));
 
                         temp.set(target);
@@ -777,7 +771,7 @@ class MyFS extends DefaultFS {
                             await this.animations.read_block(curr_block, true);
                             await this.animations.read_block(start_idx, true);
                             await this.animations.deregister_block(curr_block);
-                            await this.animations.register_block_to_inode(target_inodenum, curr_block);
+                            await this.animations.register_block_to_inode(target_res.inodenum, curr_block);
                             await this.animations.deregister_block(start_idx);
                         }
 
@@ -840,7 +834,6 @@ class MyFS extends DefaultFS {
         } else {
     		return "EIMPL";
     	}
-
 
         return 0;
     }
