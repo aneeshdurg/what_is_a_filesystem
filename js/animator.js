@@ -318,12 +318,13 @@ class FSAnimator {
         }
 
         if (num_blocks) {
-            this.ctx.fillText("Indirect: " + Array.from(inode.indirect).join(" "), w_offset, h_offset);
+            var indirect_label = "Indirect: " + Array.from(inode.indirect).join(" ");
+            this.ctx.fillText(indirect_label, w_offset, h_offset);
             var ind_x = this.inode_width * this.fs.num_inodes + this.block_width * inode.indirect + this.block_width/2;
             var ind_y = 1;
             this.canvas_arrow(
                 this.ctx,
-                w_offset + font_width * "Indirect: 0".length,
+                w_offset + font_width * indirect_label.length,
                 h_offset - 10,
                 ind_x,
                 ind_y);
