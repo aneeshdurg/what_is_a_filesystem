@@ -2,8 +2,10 @@
 ---
 import {CONSTANTS} from "{{ '/js/defs.js' | relative_url }}"
 
+import {fs_2, setup_2} from "./2.js"
+
 (async function() {
-    await window.setup_2;
+    await setup_2;
     var file = await fs_2.open("/file", CONSTANTS.O_RDONLY);
     var indirect = fs_2._inodes[file.inodenum].indirect[0];
     var disk_offset = indirect * fs_2.block_size;
