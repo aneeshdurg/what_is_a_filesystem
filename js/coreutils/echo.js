@@ -1,4 +1,5 @@
 import {Shell} from '../shell.js'
+import {str_to_bytes} from '../fs_helper.js'
 
 Shell.prototype.handle_echo = async function(command) {
     var error = null;

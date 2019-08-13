@@ -88,7 +88,7 @@ If you're stuck check out these hints below:
 
 <pre id="myvfs_code">
 // populates MyVFS with generic error functions for all callbacks
-var MyVFS = class extends DefaultFS{};
+class MyVFS extends DefaultFS{};
 
 // implement a few other callbacks like readdir
 // -- snip --
@@ -109,6 +109,8 @@ MyVFS.prototype.write = function (fd, buffer) {
 <p id='status'></p>
 <button onclick='load_solution()'>Mount in shell</button>
 <br>
+<div id='shell'></div>
+<br>
 
 Try commands such as `echo hi > /dev/zero` and `hexdump -c 10 /dev/zero`
 (Shows the hex values of the first 10 bytes of the file - change 10 to something else to see a different number of bytes).
@@ -117,21 +119,35 @@ Do not use `cat` to read the file, as `cat` will continue reading until the file
 Since our implementation of read should never return 0, the file never ends and `cat` will hang as
 our shell simulator models an operating system that can have at most 2 running processes at any given time - the shell/kernel and at most one other process - and has no support for pre-emption.
 
-<div id='shell'></div>
-<br>
-
 In our simiulator the filesystem acts similar to how a filesystem in the kernel would present itself (a series of functions that can be called from the kernel), which is different from the way FUSE works
 (a series of functions that can are run in the context of a running filesystem process via [IPC](https://github.com/illinois-cs241/coursebook/wiki/Ipc)).
 
 
 <script>
+var load_solution = function(){}
+</script>
+<script type="module">
+import {Stat, FileDescriptor} from "{{ '/js/defs.js' | relative_url }}"
+import {DefaultFS} from "{{ '/js/fs.js' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
+import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+
 var shell = null;
-var fs = new LayeredFilesystem();
+var fs = null;
 var orig_code = null;
-window.onload = function () {
+
+function setup_shell() {
+    shell = null;
+    document.getElementById("shell").innerHTML = "";
+
+    fs = null;
+    fs = new LayeredFilesystem();
+
     shell = new Shell(fs, document.getElementById("shell"));
     shell.main("{{ site.baseurl }}");
+}
 
+window.onload = function () {
     // Generate input boxes
     var q_container = document.getElementById('myvfs_code');
     orig_code = q_container.textContent;
@@ -154,15 +170,18 @@ window.onload = function () {
     cache_input("{{ write_placeholder }}");
 };
 
-async function load_solution() {
+window.load_solution = async function () {
+    setup_shell();
+    await shell.initialized;
+
     try {
         var MyVFS = (function () {
             var read_input = document.getElementById('{{ read_placeholder }}');
             var write_input = document.getElementById('{{ write_placeholder }}');
             var code = orig_code.replace('{{ read_placeholder }}', read_input.value);
             code = code.replace('{{ write_placeholder }}', write_input.value);
-            eval(code);
-            return MyVFS;
+            var vfs_gen = eval('(function() {' + code + '\nreturn MyVFS;})');
+            return vfs_gen();
         })();
 
         MyVFS.prototype.stat = function (path) {

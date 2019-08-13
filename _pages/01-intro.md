@@ -3,21 +3,7 @@ layout: post
 title:  "Introduction"
 ---
 
-<script>
-var animated_shell;
-var animated_fs;
-window.onload = function() {
-    var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell_parent"));
-    shell.main("{{ site.baseurl }}");
-    console.log("set up shell");
-
-    var canvas = create_canvas('fs_vis');
-    animated_fs = new LayeredFilesystem(null, canvas);
-    animated_shell = new Shell(animated_fs, document.getElementById("shell_fs_parent"));
-    animated_shell.main("{{ site.baseurl }}");
-    console.log("set up animated shell");
-};
-</script>
+<script type="module" src="{{ '/js/pages/01-intro.js' | relative_url }}"></script>
 
 Welcome to `what is a filesystem`!
 The purpose of this interactive book is to help you learn and understand filesystems concepts.
@@ -56,31 +42,12 @@ Try running some commands in the shell below and see how/if they interact with t
 
 You can change the speed of the animations here:
 
+<div id="speed_selector_container" style="display:none;">
 <select id="speed_selector">
 <option value="">default</option>
 </select>
 <button onclick='change_speed()'>Change Speed!</button>
-
-<script>
-for (var i = 10; i <= 100; i++) {
-    var opt = document.createElement('option');
-    opt.value = i.toString();
-    opt.innerText = i + "ms";
-    document.getElementById('speed_selector').appendChild(opt);
-}
-async function change_speed() {
-    var speed_value = document.getElementById('speed_selector').value;
-    animated_fs.ioctl(
-        await animated_fs.open("/", O_ACCESS),
-        IOCTL_SET_ANIMATION_DURATION,
-        {
-            duration: speed_value,
-            save: true,
-        }
-    );
-    alert("Changed animation speed to "+ speed_value + "ms");
-}
-</script>
+</div>
 
 Changing the speed here will change the speed of all animations on this website.
 

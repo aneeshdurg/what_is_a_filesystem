@@ -2,20 +2,7 @@
 layout: post
 title:  "Navigating the File Tree"
 ---
-<script>
-window.onload = async function() {
-    var fs = new MyFS();
-
-    var shell_containers = document.querySelectorAll('[id^="shell_"]');
-    var prev_shell_init = null;
-    for (shell_el of shell_containers) {
-        await prev_shell_init;
-        var shell = new Shell(new LayeredFilesystem(fs), shell_el);
-        shell.main("{{ site.baseurl }}");
-        prev_shell_init = shell.initialized;
-    }
-};
-</script>
+<script type="module" src="{{ '/js/pages/02-navigating.js' | relative_url }}"></script>
 
 In this section we will explore the basic shell commands that enable us to navigate a filesystem and examine some of the commands that we can use to interact with files.
 If you're already familiar with most standard `sh`/`bash` built-ins and standard GNU/linux utilities, feel free to skip this section.
