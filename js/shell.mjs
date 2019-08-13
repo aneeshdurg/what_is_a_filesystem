@@ -669,7 +669,7 @@ export class Shell {
 
     async _load_coreutils(base_url) {
         if (!coreutils_promises) {
-            coreutils_promises = possible_commands.map(x => import("./coreutils/" + x.name + ".js"));
+            coreutils_promises = possible_commands.map(x => import("./coreutils/" + x.name + ".mjs"));
         }
 
         for (let p of coreutils_promises) {
