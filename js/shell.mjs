@@ -1,3 +1,11 @@
+import {DefaultFS} from './fs.mjs'
+import {str_to_bytes} from './fs_helper.mjs'
+import {
+  CONSTANTS,
+  FileDescriptor,
+  IOCTL_IS_TTY,
+} from './defs.mjs'
+
 // https://stackoverflow.com/a/13819253/5803067
 var isMobile = {
     Android: function() {
@@ -26,7 +34,7 @@ function stop_event(e) {
 }
 
 
-const possible_commands = [
+export const possible_commands = [
     {
         name: "cat",
         description: "Concatenate files and input streams " +
@@ -167,7 +175,7 @@ class _Command_state {
     }
 }
 
-class ParsingError extends Error {
+export class ParsingError extends Error {
     constructor(state) {
         super();
         this.state = state;
@@ -178,7 +186,7 @@ class ParsingError extends Error {
     }
 }
 
-class Command {
+export class Command {
     // TODO create struct to represent parsing state
     static parse_command(input) {
         let state = new _Command_state();
@@ -288,7 +296,7 @@ class Command {
 /**
  * ShellFS will provide a filesystem interface to reading and writing input/output and errors.
  */
-class ShellFS extends DefaultFS {
+export class ShellFS extends DefaultFS {
     constructor(shell) {
         super();
         this.shell = shell;
@@ -296,10 +304,10 @@ class ShellFS extends DefaultFS {
 
     async open(path, mode) {
         if (path === "/stdout" || path === "/stdin" || path === "/stderr") {
-            if (path !== "/stdin" && mode & O_RDONLY)
+            if (path !== "/stdin" && mode & CONSTANTS.O_RDONLY)
                 return "EPERM";
 
-            if (path === "/stdin" && mode & O_WRONLY)
+            if (path === "/stdin" && mode & CONSTANTS.O_WRONLY)
                 return "EPERM";
 
             var f = new FileDescriptor(this, path, 0, null, mode);
@@ -426,7 +434,7 @@ class Output {
 /**
  * Shell models a single process operating system, a GUI, and a userspace shell.
  */
-class Shell {
+export class Shell {
     constructor (fs, parent) {
         this.filesystem = fs;
         this.current_dir = "/";
@@ -822,11 +830,11 @@ class Shell {
 
         // Prepare the output stream
         var command_output = this.expand_path(command.output)
-        var open_flags = O_WRONLY | O_CREAT;
+        var open_flags = CONSTANTS.O_WRONLY | CONSTANTS.O_CREAT;
         if (command.append_output)
-            open_flags |= O_APPEND;
+            open_flags |= CONSTANTS.O_APPEND;
         else
-            open_flags |= O_TRUNC;
+            open_flags |= CONSTANTS.O_TRUNC;
 
         command.output = await this.filesystem.open(command_output, open_flags, this.umask);
         if (typeof(command.output) === 'string')

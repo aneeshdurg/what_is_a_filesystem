@@ -1,3 +1,7 @@
+import {Shell} from '../shell.mjs'
+
+import {str_to_bytes} from '../fs_helper.mjs'
+
 Shell.prototype.handle_ls = async function(command) {
     var argument = "";
     var output = " ";
@@ -9,12 +13,12 @@ Shell.prototype.handle_ls = async function(command) {
     async function help() {
         const help_msg =
             "ls [options...] [path]\n" +
-            "\t if path is empty, the current directory will be used instead\n" +
-            "\t options can be 0 or more of the following:\n" +
-            "\t\t-a show all files (including hidden files)\n" +
-            "\t\t-i show inode numbers\n" +
-            "\t\t-l show all information\n" +
-            "\t\t-h show this help message\n";
+            "	 if path is empty, the current directory will be used instead\n" +
+            "	 options can be 0 or more of the following:\n" +
+            "		-a show all files (including hidden files)\n" +
+            "		-i show inode numbers\n" +
+            "		-l show all information\n" +
+            "		-h show this help message\n";
         await that.filesystem.write(that.stderr, str_to_bytes(help_msg));
     }
 

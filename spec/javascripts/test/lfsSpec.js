@@ -1,5 +1,28 @@
 describe("Test LFS", function() {
+    async function imports() {
+        await _import({
+            src: '/__src__/js/defs.mjs',
+            name: ['CONSTANTS', 'FileDescriptor']});
+
+        await _import({
+            src: '/__src__/js/lfs.mjs',
+            name: 'LayeredFilesystem'});
+
+        await _import({
+            src: '/__src__/js/testfs.mjs',
+            name: 'TestFS'});
+
+        await _import({
+            src: '/__src__/js/myfs.mjs',
+            name: 'MyFS'});
+    }
+
+    beforeAll((done) => {
+        imports().then(done);
+    });
+
     it("test_layered_fns", async function () {
+        console.log(TestFS);
         var testfs = new TestFS();
         var lfs = new LayeredFilesystem();
         await lfs.mkdir("/test", 0o755);
@@ -40,7 +63,7 @@ describe("Test LFS", function() {
         expect(Boolean(testfs.mkdir_called)).toBe(true)
         expect(testfs.mkdir_called[0]).toBe("/newdir");
 
-        lfs.open("/test", O_RDONLY);
+        lfs.open("/test", CONSTANTS.O_RDONLY);
         expect(Boolean(testfs.open_called)).toBe(true);
         expect(testfs.open_called[0]).toBe("/");
 

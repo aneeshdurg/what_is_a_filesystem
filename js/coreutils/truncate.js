@@ -1,8 +1,12 @@
+import {Shell} from '../shell.mjs'
+
+import {str_to_bytes} from '../fs_helper.mjs'
+
 Shell.prototype.handle_truncate = async function(command) {;
     async function usage() {
         var help_msg =
             "truncate filename filesize\n" +
-            "\tTruncate or extend filename to be filesize bytes long\n";
+            "	Truncate or extend filename to be filesize bytes long\n";
         await this.filesystem.write(this.stderr, str_to_bytes(help_msg));
     }
 

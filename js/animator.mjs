@@ -16,7 +16,7 @@ class ReadTask extends Task {
     }
 }
 
-class FSAnimator {
+export class FSAnimator {
     constructor(fs, canvas, block_limit) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");

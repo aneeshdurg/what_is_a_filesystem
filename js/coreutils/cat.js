@@ -1,3 +1,5 @@
+import {Shell} from '../shell.mjs'
+
 Shell.prototype.handle_cat = async function(command) {
     var prog_name = command.arguments.shift();
     command.arguments.unshift("-c", "-1")

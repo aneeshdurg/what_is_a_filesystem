@@ -11,14 +11,9 @@
     #   - lib/source2.js
     #   - dist/**/*.js
     #
+
     src_files:
-        - js/defs.js
-        - js/fs_helper.js
-        - js/animator.js
-        - js/fs.js
-        - js/myfs.js
-        - js/lfs.js
-        - js/shell.js
+      - js/content_utils.js
 
     # stylesheets
     #

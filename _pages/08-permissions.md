@@ -2,6 +2,17 @@
 layout: post
 title:  "Permissions and Types"
 ---
+<script type="module">
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
+
+var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell"));
+shell.main("{{ site.baseurl }}");
+
+var shell_1 = new Shell(new LayeredFilesystem(), document.getElementById("shell_1"));
+shell_1.main("{{ site.baseurl }}");
+</script>
+
 In the previous section we talked about how `stat` is used to read a file's metadata.
 Here, we'll be taking a closer look at the mode field on the inode and what data it actually stores.
 
@@ -143,10 +154,6 @@ There's also only one user on the simulator, so the group and other options are 
 Try it out and use `stat` and `cat` to check/verify that permissions have been set:
 
 <div id='shell'></div>
-<script>
-var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell"));
-shell.main("{{ site.baseurl }}");
-</script>
 
 ## Executing files in the simulator
 
@@ -157,15 +164,11 @@ For example, use the command `edit prog.js` to open a file and enter the followi
 
 ```javascript
 (async function (command){
-    await this.filesystem.write(command.output, str_to_bytes("hello world!\n"));
+    await this.filesystem.write(command.output, fs_helper.str_to_bytes("hello world!\n"));
     return 0;
 })
 ```
 <div id='shell_1'></div>
-<script>
-var shell_1 = new Shell(new LayeredFilesystem(), document.getElementById("shell_1"));
-shell_1.main("{{ site.baseurl }}");
-</script>
 
 Press `save` and then try to run the program with `./prog.js`.
 
@@ -187,4 +190,7 @@ Yes! `0o5=0b101 (r-x)`
 <br>
 
 To learn more about how to create executable programs in the simulator see this [tutorial]({{ '/pages/writing_programs.html' | relative_url }}).
+
 ## Permissions for directories
+
+<!-- TODO fill this out -->

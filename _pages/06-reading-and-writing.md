@@ -5,6 +5,8 @@ title:  "Reading/Writing with inodes"
 
 # Reading data
 
+<script type="module" src="{{ '/js/pages/06-reading-and-writing/1.mjs' | relative_url }}"></script>
+
 Reading and writing from inodes with direct and indirect blocks can be tricky business.
 Let's begin by considering the simplest cases, ones where we're reading a file that fits entirely into the direct blocks.
 This time each step in the animation will advance only when you press `step`.
@@ -12,46 +14,6 @@ This time each step in the animation will advance only when you press `step`.
 <div id='shell_1'></div>
 <canvas id='canvas_1'></canvas>
 <button onclick='step_fs_1()'>Step</button>
-<script>
-var canvas_1 = create_canvas('canvas_1');
-var fs_1 = new MyFS(canvas_1);
-fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-    duration: 10,
-    save: false,
-});
-var shell_1 = new Shell(new LayeredFilesystem(fs_1), document.getElementById('shell_1'));
-shell_1.remove_container_event_listeners();
-shell_1.prompt = function () { return "\n\n"; };
-shell_1.main("{{ site.baseurl }}");
-async function create_file_from_remote(fs, remote, local) {
-    var request = await fetch(remote);
-    var reader = request.body.getReader();
-    var file = await fs.open(local, O_WRONLY | O_CREAT, 0o777);
-    console.log(file);
-    while (true) {
-        var result = await reader.read();
-        console.log(result);
-        if (result.done)
-            break;
-        await fs.write(file, result.value);
-    }
-}
-function run_cat_on_shell(shell) {
-    shell.simulate_input("cat /file\n");
-}
-var action_1 = (async function() {
-    await shell_1.initialized;
-    await create_file_from_remote(fs_1, "{{ '/assets/32b.txt' | relative_url}}", "/file");
-    fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-        duration: 0,
-        save: false,
-    });
-    run_cat_on_shell(shell_1);
-})();
-function step_fs_1() {
-    fs_1.animations.draw();
-}
-</script>
 
 Notice how we read one block at a time?
 Many programs attempt to optimize read/write performance by always trying to access data the size of a block.
@@ -63,31 +25,6 @@ To re-run the above example after running this one, reload the page.
 
 <pre id='5b_read'></pre>
 <button onclick='step_5b_read()'>read 5b</button>
-<script>
-var pre = document.getElementById('5b_read');
-var setup_done = false;
-var fd = null;
-async function setup_step_5b_read() {
-    if (!setup_done) {
-        await action_1;
-        fd = await fs_1.open("/file", O_RDONLY);
-        setup_done = true;
-    }
-    return fd;
-}
-async function step_5b_read() {
-    fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-        duration: 10,
-        save: false,
-    });
-    var file = await setup_step_5b_read();
-    var buffer = new Uint8Array(new ArrayBuffer(5));
-    var bytes_read = await fs_1.read(file, buffer);
-    var read_view = new Uint8Array(buffer.buffer, 0, bytes_read);
-    pre.innerText += "read returned " + bytes_read + " bytes(s): '" + bytes_to_str(read_view) + "'\n";
-}
-</script>
-
 
 Note how read returns us 5 bytes as if this weird structure of storing data in blocks could have been replaced by one continous storage mechanism?
 This is the motivation behind defining a filesystem as a series of callbacks - we can use familiar interfaces that are agnostic of the actual mechanism that stores the data.
@@ -104,30 +41,7 @@ As we calculated in the [previous section](/pages/05-inodes.html), the maximum s
 <div id='shell_2'></div>
 <canvas id='canvas_2'></canvas>
 <button onclick='step_fs_2()'>Step</button>
-<script>
-var canvas_2 = create_canvas('canvas_2');
-var fs_2 = new MyFS(canvas_2);
-fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-        duration: 10,
-        save: false,
-});
-var shell_2 = new Shell(new LayeredFilesystem(fs_2), document.getElementById('shell_2'));
-shell_2.remove_container_event_listeners();
-shell_2.prompt = function () { return "\n\n"; };
-shell_2.main("{{ site.baseurl }}");
-var action_2 = (async function() {
-    await shell_2.initialized;
-    await create_file_from_remote(fs_2, "{{ '/assets/288b.txt' | relative_url }}", "/file");
-    fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-        duration: 0,
-        save: false,
-    });
-    run_cat_on_shell(shell_2);
-})();
-function step_fs_2() {
-    fs_2.animations.draw();
-}
-</script>
+<script type="module" src="{{ '/js/pages/06-reading-and-writing/2.mjs' | relative_url }}"></script>
 
 Notice how in this example, as you step through we access block 5 frequently.
 Can you guess why?
@@ -168,9 +82,4 @@ And watch how the disk is accessed in each case.
 
 <div id='shell_3'></div>
 <canvas id='canvas_3'></canvas>
-<script>
-var canvas_3 = create_canvas('canvas_3');
-var fs_3 = new MyFS(canvas_3);
-var shell_3 = new Shell(new LayeredFilesystem(fs_3), document.getElementById('shell_3'));
-shell_3.main("{{ site.baseurl }}");
-</script>
+<script type="module" src="{{ '/js/pages/06-reading-and-writing/3.mjs' | relative_url }}"></script>

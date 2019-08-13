@@ -1,3 +1,5 @@
+import {Shell} from '../shell.mjs'
+
 Shell.prototype.handle_mkdir = async function (command) {
     var errors = "";
     for (var i = 1; i < command.arguments.length; i++) {
@@ -5,7 +7,7 @@ Shell.prototype.handle_mkdir = async function (command) {
         var output = await this.filesystem.mkdir(path, 0o777);
         if (typeof(output) === 'string') {
             errors += "Error creating directory '" + command.arguments[i] + "':";
-            errors += "\n\t" + output + "\n";
+            errors += "\n" + output + "\n";
         }
     }
 

@@ -1,8 +1,12 @@
+import {Shell} from '../shell.mjs'
+
+import {str_to_bytes} from '../fs_helper.mjs'
+
 Shell.prototype.handle_umount = async function(command) {
     async function help() {
         const help_msg =
             "umount path\n" +
-            "\t Unmounts `path` if mounted.\n";
+            "	 Unmounts `path` if mounted.\n";
         await this.filesystem.write(this.stderr, str_to_bytes(help_msg));
     }
 

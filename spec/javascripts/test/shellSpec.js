@@ -1,4 +1,26 @@
 describe("Test Shell", function () {
+    async function imports() {
+      await _import({
+            src: '/__src__/js/defs.mjs',
+            name: ['CONSTANTS']});
+
+        await _import({
+            src: '/__src__/js/lfs.mjs',
+            name: 'LayeredFilesystem'});
+
+        await _import({
+            src: '/__src__/js/shell.mjs',
+            name: 'Shell'});
+
+        await _import({
+            src: '/__src__/js/fs_helper.mjs',
+            name: 'bytes_to_str'});
+    }
+
+    beforeAll((done) => {
+        imports().then(done);
+    });
+
     it("tests shellfs existence", async function() {
         var shell = await get_shell();
 
@@ -24,7 +46,7 @@ describe("Test Shell", function () {
         // Setup shell without UI
         var shell = await get_shell();
 
-        var fd = await shell.filesystem.open("/.shellfs/stdin", O_RDONLY);
+        var fd = await shell.filesystem.open("/.shellfs/stdin", CONSTANTS.O_RDONLY);
         expect(typeof(fd)).not.toBe('string');
 
         var buffer = new Uint8Array(new ArrayBuffer(expected_str.length));

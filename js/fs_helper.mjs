@@ -1,4 +1,4 @@
-function split_parent_of(child) {
+export function split_parent_of(child) {
     if (child == "/")
         return ["/", "/"];
 
@@ -9,14 +9,14 @@ function split_parent_of(child) {
     return [ parent_part, parts.slice(-1)[0] ];
 }
 
-function not_implemented() {
+export function not_implemented() {
     return "EIMPL";
 }
 
-function bytes_to_str(bytes) {
+export function bytes_to_str(bytes) {
     return String.fromCharCode.apply(null, bytes);
 }
 
-function str_to_bytes(str) {
+export function str_to_bytes(str) {
     return new Uint8Array(Array.from(str).map(x => x.charCodeAt(0)));
 }

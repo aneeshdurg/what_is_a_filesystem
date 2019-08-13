@@ -1,3 +1,6 @@
+import {Shell} from '../shell.mjs'
+import {str_to_bytes} from '../fs_helper.mjs'
+
 Shell.prototype.handle_echo = async function(command) {
     var error = null;
     for (var i = 1; i < command.arguments.length; i++) {

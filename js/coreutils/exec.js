@@ -1,7 +1,21 @@
+import {Shell} from '../shell.mjs'
+
+import {CONSTANTS} from '../defs.mjs'
+import {bytes_to_str} from '../fs_helper.mjs'
+
+// Import everything so programs exec'd from the filesystem have access to it by
+// default
+import * as fs_helper from '../fs_helper.mjs'
+import * as defs from '../defs.mjs'
+import * as fs from '../fs.mjs'
+import * as lfs from '../lfs.mjs'
+import * as myfs from '../myfs.mjs'
+import * as shell from '../shell.mjs'
+
 Shell.prototype.handle_exec = async function(command) {
     command.arguments.shift();
     var path = this.expand_path(command.arguments[0]);
-    var file = await this.filesystem.open(path, O_RDONLY);
+    var file = await this.filesystem.open(path, CONSTANTS.O_RDONLY);
     if (typeof(file) === 'string')
         return this.return_error("Invalid command: '" + file + "'");
 

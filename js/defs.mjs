@@ -1,27 +1,59 @@
-const O_ACCESS = 0;
-const O_APPEND = 1;
-const O_CREAT = 2;
-const O_TRUNC = 4;
-const O_RDONLY = 8;
-const O_WRONLY = 16;
-const O_RDWR = O_RDONLY | O_WRONLY;
-const O_DIRECTORY = 32;
-
-const SEEK_SET = 0;
-const SEEK_END = 1;
-const SEEK_CURR = 2;
-
 /**
  * IOCTL numbers need to be unique, this is a good way of ensuring that (up to overflow).
  * Arguably, this is overkill, since they only need to be unique *per* filesystem.
  */
 var __ioctl_counter = 0;
-function get_unused_ioctl_num() { return __ioctl_counter++; }
+export function get_unused_ioctl_num() { return __ioctl_counter++; }
+export const IOCTL_IS_TTY = get_unused_ioctl_num();
+export const IOCTL_SELECT_INODE = get_unused_ioctl_num();
 
-const IOCTL_IS_TTY = get_unused_ioctl_num();
-const IOCTL_SELECT_INODE = get_unused_ioctl_num();
+export class CONSTANTS {
+    static get O_ACCESS() {
+      return 0;
+    }
 
-class FileDescriptor {
+    static get O_APPEND() {
+      return 1;
+    }
+
+    static get O_CREAT() {
+      return 2;
+    }
+
+    static get O_TRUNC() {
+      return 4;
+    }
+
+    static get O_RDONLY() {
+      return 8;
+    }
+
+    static get O_WRONLY() {
+      return 16;
+    }
+
+    static get O_RDWR() {
+      return CONSTANTS.O_RDONLY | CONSTANTS.O_WRONLY;
+    }
+
+    static get O_DIRECTORY() {
+      return 32;
+    }
+
+    static get SEEK_SET() {
+      return 0;
+    }
+
+    static get SEEK_END() {
+      return 1;
+    }
+
+    static get SEEK_CURR() {
+      return 2;
+    }
+}
+
+export class FileDescriptor {
     constructor(fs, path, inodenum, inode, mode) {
         this.fs = fs;
         this.path = path;
@@ -32,7 +64,7 @@ class FileDescriptor {
     }
 }
 
-class Dirent {
+export class Dirent {
     constructor(inodenum, filename) {
         this.inodenum = inodenum;
         this.filename = filename;
@@ -55,11 +87,11 @@ const _stat_params = [
 ];
 function _gen_stat() {
     var stat_src = "(function (" + _stat_params.join(",") + ") {";
-    for (param of _stat_params)  {
+    for (let param of _stat_params)  {
         // this.param = param;
         stat_src += "this." + param + " = " + param + ";";
     }
     stat_src += "});"
     return eval(stat_src);
 }
-const Stat = _gen_stat();
+export const Stat = _gen_stat();

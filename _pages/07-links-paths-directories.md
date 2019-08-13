@@ -3,6 +3,7 @@ layout: post
 title:  "Links and Paths and Directories, oh my!"
 ---
 
+<script type="module" src="{{ '/js/pages/07-links-paths-directories.mjs' | relative_url }}"></script>
 You might be thinking, inodes are great and all, but how does that turn into the files and directories we're used to seeing?
 Is a filename just another property of the inode?
 
@@ -23,12 +24,6 @@ To view information about a particular file's inode, run `inodeinfo filename` (n
 
 <div id="shell_1"></div>
 <canvas id="fs_1"></canvas>
-<script>
-var canvas = create_canvas('fs_1');
-var fs = new MyFS(canvas);
-var shell = new Shell(new LayeredFilesystem(fs), document.getElementById("shell_1"));
-shell.main("{{ site.baseurl }}");
-</script>
 
 Every time you run `ls`, you'll notice that all blocks of the root directory inode are read and dirents are extracted.
 Similarly when you run `touch` or `mkdir` a block will be appended (in this filesystem dirents are 16B, with 1B providing an inode number and 15B for the filename).
@@ -48,34 +43,7 @@ Let's try doing `cat /` or `hexdump /` to view the contents of the root director
 <div id="shell_2"></div>
 <button onclick="run_cat()">Run cat</button>
 <button onclick="run_hexdump()">Run hexdump</button>
-<script>
-var shell_2 = new Shell(new LayeredFilesystem(fs), document.getElementById("shell_2"));
-shell_2.remove_container_event_listeners();
-shell_2.prompt = function () { return "\n\n"; };
-(async function() {
-    await shell.initialized;
-    shell_2.main("{{ site.baseurl }}");
-})();
-function run_input(input) {
-    for (i of input) {
-        for (c of i)
-            shell_2.process_input(c, false);
-    }
-}
-function run_cat() {
-    run_input([
-        Array.from("cat /"),
-        ["Enter"],
-    ]);
-}
-function run_hexdump() {
-    run_input([
-        Array.from("hexdump /"),
-        ["Enter"],
-    ]);
-}
-</script>
-
+<
 Note that when we run `cat` we don't see the inode numbers because the browser isn't rendering unprintable ascii characters.
 However, `hexdump` is printing out hex bytes, so we can see the inode numbers just fine as every 16th byte, starting at the 0th byte.
 Try comparing it to `ls -i`.
@@ -101,11 +69,6 @@ Try it out for yourself:
 
 <div id="shell_3"></div>
 <canvas id="fs_3"></canvas>
-<script>
-var canvas_3 = create_canvas('fs_3');
-var shell_3 = new Shell(new LayeredFilesystem(null, canvas_3), document.getElementById("shell_3"));
-shell_3.main("{{ site.baseurl }}");
-</script>
 
 Earlier we noted that inodes don't store their own names, and this is the reason why.
 An inode could have multiple links!
