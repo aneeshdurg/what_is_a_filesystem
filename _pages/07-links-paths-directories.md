@@ -3,7 +3,7 @@ layout: post
 title:  "Links and Paths and Directories, oh my!"
 ---
 
-<script type="module" src="{{ '/js/pages/07-links-paths-directories.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/07-links-paths-directories.mjs' | relative_url }}"></script>
 You might be thinking, inodes are great and all, but how does that turn into the files and directories we're used to seeing?
 Is a filename just another property of the inode?
 

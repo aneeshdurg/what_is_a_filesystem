@@ -5,7 +5,7 @@ title:  "Reading/Writing with inodes"
 
 # Reading data
 
-<script type="module" src="{{ '/js/pages/06-reading-and-writing/1.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/06-reading-and-writing/1.mjs' | relative_url }}"></script>
 
 Reading and writing from inodes with direct and indirect blocks can be tricky business.
 Let's begin by considering the simplest cases, ones where we're reading a file that fits entirely into the direct blocks.
@@ -41,7 +41,7 @@ As we calculated in the [previous section](/pages/05-inodes.html), the maximum s
 <div id='shell_2'></div>
 <canvas id='canvas_2'></canvas>
 <button onclick='step_fs_2()'>Step</button>
-<script type="module" src="{{ '/js/pages/06-reading-and-writing/2.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/06-reading-and-writing/2.mjs' | relative_url }}"></script>
 
 Notice how in this example, as you step through we access block 5 frequently.
 Can you guess why?
@@ -82,4 +82,4 @@ And watch how the disk is accessed in each case.
 
 <div id='shell_3'></div>
 <canvas id='canvas_3'></canvas>
-<script type="module" src="{{ '/js/pages/06-reading-and-writing/3.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/06-reading-and-writing/3.mjs' | relative_url }}"></script>

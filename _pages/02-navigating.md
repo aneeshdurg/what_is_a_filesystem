@@ -2,7 +2,7 @@
 layout: post
 title:  "Navigating the File Tree"
 ---
-<script type="module" src="{{ '/js/pages/02-navigating.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/02-navigating.mjs' | relative_url }}"></script>
 
 In this section we will explore the basic shell commands that enable us to navigate a filesystem and examine some of the commands that we can use to interact with files.
 If you're already familiar with most standard `sh`/`bash` built-ins and standard GNU/linux utilities, feel free to skip this section.

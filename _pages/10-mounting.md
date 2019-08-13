@@ -2,7 +2,7 @@
 layout: post
 title: "Mounting and managing filesystems"
 ---
-<script type="module" src="{{ '/js/pages/10-mounting.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/10-mounting.mjs' | relative_url }}"></script>
 
 ## What is __mounting__?
 
@@ -311,7 +311,7 @@ MemFS.prototype.find_file_from_path = function (path) {
 </details>
 
 This would be a good time to try writing some tests.
-Go back and copy all the blocks of code you've written so far into a text editor of your choice and save the file with the extension `.js`.
+Go back and copy all the blocks of code you've written so far into a text editor of your choice and save the file with the extension `.mjs`.
 You may need to do a bit of digging on how to write some barebones HTML, but try to setup an environment to hack in/test the code you've written so far.
 
 Take a moment to look at [fs_helper.mjs](/js/fs_helper.mjs).

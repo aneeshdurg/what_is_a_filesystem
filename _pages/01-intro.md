@@ -3,7 +3,7 @@ layout: post
 title:  "Introduction"
 ---
 
-<script type="module" src="{{ '/js/pages/01-intro.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/01-intro.mjs' | relative_url }}"></script>
 
 Welcome to `what is a filesystem`!
 The purpose of this interactive book is to help you learn and understand filesystems concepts.

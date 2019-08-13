@@ -36,7 +36,7 @@ Luckily for us, this number is usually high enough that it's unlikely you'd ever
 Let's take a look at an example.
  
 <canvas id="canvas_1"></canvas>
-<script type="module" src="{{ '/js/pages/05-inodes/1.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/05-inodes/1.mjs' | relative_url }}"></script>
 
 In this filesystem each block is 16B.
 The inode table is represented by the smaller slots on the left and the larger blocks on the right are regular disk blocks.
@@ -46,7 +46,7 @@ These refer to the structures that store the block indicies used by this file.
 
 Here you can see another example where we have a file who's contents are not contiguously stored on disk.
 <canvas id="canvas_2"></canvas>
-<script type="module" src="{{ '/js/pages/05-inodes/2.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/05-inodes/2.mjs' | relative_url }}"></script>
 
 When reading from this non-contiguous file, the `read` command will give us access to a stream of data and
 will create the illusion that the file is one continous entity by seamlessly (ignoring disk performance) concatenating the data from one block with the data from the next block.
@@ -76,7 +76,7 @@ In our filesystem, each block index is just 1 byte so an indirect block can stor
 Let's take a look at how the indirect block of our 48 byte file above looks.
 
 <pre id="info">Loading...</pre>
-<script type="module" src="{{ '/js/pages/05-inodes/3.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/05-inodes/3.mjs' | relative_url }}"></script>
 
 As we can see, the indirect block contains 16 entries of which one is set to be block 6.
 Note that 0 is a valid block number and the only way we can tell whether a block is filled in or not is to use the filesize.
@@ -97,7 +97,7 @@ Every time a disk block is read it will flash. Try to guess which block is the i
 <canvas id="canvas_3"></canvas>
 <br>
 <button onclick="run_disk_read()">Read file</button>
-<script type="module" src="{{ '/js/pages/05-inodes/4.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/05-inodes/4.mjs' | relative_url }}"></script>
 
 Try running it a few times if you didn't spot it.
 

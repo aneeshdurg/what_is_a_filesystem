@@ -3,7 +3,7 @@ layout: post
 title: "Disk Latency"
 ---
 
-<script type="module" src="{{ '/js/pages/11-disk-latency.js' | relative_url }}"></script>
+<script type="module" src="{{ '/js/pages/11-disk-latency.mjs' | relative_url }}"></script>
 
 Up till now we've assumed that we can jump around the disk for free.
 In the real world this assumption doesn't hold up for all storage mediums.
