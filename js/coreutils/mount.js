@@ -1,11 +1,17 @@
+import {Shell} from '../shell.js'
+
+import {DefaultFS} from '../fs.js'
+import {str_to_bytes} from '../fs_helper.js'
+import {Command} from '../shell.js'
+
 Shell.prototype.handle_mount = async function(command) {
     async function help() {
         const help_msg =
             "mount path filesystem\n" +
-            "\t mounts `filesystem` at `path`.\n" +
-            "\t`path` must be a directory.\n" +
-            "\t`filesystem` must be a valid, global,\n" +
-            "\tjavascript object that is an instance of DefaultFS.\n";
+            "	 mounts `filesystem` at `path`.\n" +
+            "	`path` must be a directory.\n" +
+            "	`filesystem` must be a valid, global,\n" +
+            "	javascript object that is an instance of DefaultFS.\n";
         await this.filesystem.write(this.stderr, str_to_bytes(help_msg));
     }
 
@@ -52,8 +58,10 @@ Shell.prototype.handle_mount = async function(command) {
             return "";
     }
 
-    if (!(fs instanceof DefaultFS))
+    if (!(fs instanceof DefaultFS)) {
+        console.log("Mount got", fs);
         return this.return_error(filesystem + " is not an instance of DefaultFS!");
+    }
 
     var error = await this.filesystem.mount(path, fs);
     if (typeof(error) === 'string')

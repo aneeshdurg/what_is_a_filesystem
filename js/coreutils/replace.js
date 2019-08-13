@@ -1,12 +1,17 @@
+import {Shell} from '../shell.js'
+
+import {CONSTANTS, IOCTL_IS_TTY} from '../defs.js'
+import {bytes_to_str, str_to_bytes} from '../fs_helper.js'
+
 Shell.prototype.handle_replace = async function(command) {
     if (command.arguments.length != 3) {
         const usage =
             "replace str1 str2\n" +
-            "\treplaces str1 in input by str2 in output\n";
+            "	replaces str1 in input by str2 in output\n";
         await this.filesystem.write(this.stderr, str_to_bytes(usage));
     }
 
-    var input_file = await this.filesystem.open(this.input_path, O_RDONLY);
+    var input_file = await this.filesystem.open(this.input_path, CONSTANTS.O_RDONLY);
 
     var bufferlen = 16;
     var out_is_stdout = await this.filesystem.ioctl(command.output, IOCTL_IS_TTY);

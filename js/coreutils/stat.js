@@ -1,3 +1,7 @@
+import {Shell} from '../shell.js'
+
+import {str_to_bytes} from '../fs_helper.js'
+
 Shell.prototype.handle_stat = async function(command) {
     if (command.arguments.length != 2) {
         this.return_error("stat expects a single filename!");

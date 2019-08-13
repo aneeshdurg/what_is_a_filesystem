@@ -1,19 +1,32 @@
-const IOCTL_SET_ANIMATION_DURATION = get_unused_ioctl_num();
-const IOCTL_RESET_ANIMATION_DURATION = get_unused_ioctl_num();
+import {DefaultFS} from './fs.js'
+import * as helper from './fs_helper.js'
+import {FSAnimator} from './animator.js'
+import {
+  CONSTANTS,
+  Dirent,
+  FileDescriptor,
+  get_unused_ioctl_num,
+  IOCTL_IS_TTY,
+  IOCTL_SELECT_INODE,
+  Stat,
+} from './defs.js'
 
-const IOCTL_SET_DISK_PTR_SPEED = get_unused_ioctl_num();
-const IOCTL_ENABLE_DISK_PTR = get_unused_ioctl_num();
-const IOCTL_DISABLE_DISK_PTR = get_unused_ioctl_num();
-const IOCTL_SET_DISK_PTR_POS = get_unused_ioctl_num();
+export const IOCTL_SET_ANIMATION_DURATION = get_unused_ioctl_num();
+export const IOCTL_RESET_ANIMATION_DURATION = get_unused_ioctl_num();
 
-const IOCTL_ENABLE_CACHE = get_unused_ioctl_num();
-const IOCTL_DISABLE_CACHE = get_unused_ioctl_num();
-const IOCTL_GET_CACHE_CONTENTS = get_unused_ioctl_num();
-const IOCTL_SET_CACHE_SIZE = get_unused_ioctl_num();
+export const IOCTL_SET_DISK_PTR_SPEED = get_unused_ioctl_num();
+export const IOCTL_ENABLE_DISK_PTR = get_unused_ioctl_num();
+export const IOCTL_DISABLE_DISK_PTR = get_unused_ioctl_num();
+export const IOCTL_SET_DISK_PTR_POS = get_unused_ioctl_num();
 
-const IOCTL_DEFRAG = get_unused_ioctl_num();
+export const IOCTL_ENABLE_CACHE = get_unused_ioctl_num();
+export const IOCTL_DISABLE_CACHE = get_unused_ioctl_num();
+export const IOCTL_GET_CACHE_CONTENTS = get_unused_ioctl_num();
+export const IOCTL_SET_CACHE_SIZE = get_unused_ioctl_num();
 
-class Inode {
+export const IOCTL_DEFRAG = get_unused_ioctl_num();
+
+export class Inode {
     constructor() {
         this.num_direct = 2;
         this.num_indirect = 1;
@@ -48,7 +61,7 @@ class Inode {
     }
 }
 
-class MyFS extends DefaultFS {
+export class MyFS extends DefaultFS {
     constructor(canvas) {
         super();
 
@@ -249,7 +262,7 @@ class MyFS extends DefaultFS {
         if (file == "/")
             return 0;
 
-        var split_filename = split_parent_of(file);
+        var split_filename = helper.split_parent_of(file);
         var entries = await this.readdir(split_filename[0]);
         for (var i = 0; i < entries.length; i++) {
             if (entries[i].filename == split_filename[1]) {
@@ -341,12 +354,12 @@ class MyFS extends DefaultFS {
             ];
             var bytes_read = 0;
             var filedes = new FileDescriptor(
-                this, "", inodenum, inode, O_RDONLY | O_DIRECTORY);
+                this, "", inodenum, inode, CONSTANTS.O_RDONLY | CONSTANTS.O_DIRECTORY);
 
             var buffer = new Uint8Array(new ArrayBuffer(this.block_size));
             while ((bytes_read = await this.read(filedes, buffer))) {
                 var filename = new Uint8Array(buffer.buffer, 1, this.dirent_size - 1);
-                filename = bytes_to_str(filename).split("\u0000")[0];
+                filename = helper.bytes_to_str(filename).split("\u0000")[0];
                 dir_contents.push(new Dirent(buffer[0],  filename));
             }
             i++;
@@ -396,7 +409,7 @@ class MyFS extends DefaultFS {
             inode.ctim = 0;
         }
 
-        var split_filename = split_parent_of(path);
+        var split_filename = helper.split_parent_of(path);
         var parent_inodenum = await this.inode_of(split_filename[0]);
         var parent_inode = this._inodes[parent_inodenum];
 
@@ -469,7 +482,7 @@ class MyFS extends DefaultFS {
         if (mode == null)
             return "EINVAL";
 
-        var split_filename = split_parent_of(filename);
+        var split_filename = helper.split_parent_of(filename);
         if (split_filename[1].length > (this.dirent_size - 1))
             return "EINVAL";
 
@@ -505,13 +518,13 @@ class MyFS extends DefaultFS {
         // time to append to the directory using write
         // TODO wrap around this with a function open_inode()
         var filedes = new FileDescriptor(
-            this, "", parent_inodenum, parent_inode, O_WRONLY | O_APPEND | O_DIRECTORY);
+            this, "", parent_inodenum, parent_inode, CONSTANTS.O_WRONLY | CONSTANTS.O_APPEND | CONSTANTS.O_DIRECTORY);
         filedes.offset = filedes.inode.filesize;
 
         var dirent_str = "\u0000"; // space for the inodenum
         dirent_str += split_filename[1]; // filename
         dirent_str = dirent_str.padEnd(this.dirent_size, "\u0000"); // Add any necessary padding to meet the desired size.
-        var dirent = str_to_bytes(dirent_str);
+        var dirent = helper.str_to_bytes(dirent_str);
         dirent[0] = found_inode;
         var error = await this.write(filedes, dirent);
 
@@ -533,7 +546,7 @@ class MyFS extends DefaultFS {
 
         var inode = this._inodes[inodenum];
         if (length > inode.filesize) {
-            var file = await this.open(path, O_WRONLY | O_APPEND);
+            var file = await this.open(path, CONSTANTS.O_WRONLY | CONSTANTS.O_APPEND);
             if (typeof(file) === 'string')
                 return file;
 
@@ -577,7 +590,7 @@ class MyFS extends DefaultFS {
     async open(filename, flags, mode) {
         // TODO check permissions
         var inodenum = null;
-        if ((flags & O_CREAT) && (await this.inode_of(filename)) === 'ENOENT') {
+        if ((flags & CONSTANTS.O_CREAT) && (await this.inode_of(filename)) === 'ENOENT') {
             inodenum = await this.create(filename, mode);
         } else {
             inodenum = await this.inode_of(filename);
@@ -588,27 +601,27 @@ class MyFS extends DefaultFS {
         var inode = this._inodes[inodenum];
         inode.update_atim();
 
-        if ((flags & O_DIRECTORY) && !(inode.is_directory)) {
+        if ((flags & CONSTANTS.O_DIRECTORY) && !(inode.is_directory)) {
             return "ENOTDIR";
         }
 
-        if ((flags & O_RDONLY) && !(inode.permissions & 0o400)) {
+        if ((flags & CONSTANTS.O_RDONLY) && !(inode.permissions & 0o400)) {
             return "EPERM";
-        } else if ((flags & O_WRONLY) && !(inode.permissions & 0o200)) {
+        } else if ((flags & CONSTANTS.O_WRONLY) && !(inode.permissions & 0o200)) {
             return "EPERM";
         }
 
-        if ((flags & O_TRUNC) && (flags & O_WRONLY)) {
+        if ((flags & CONSTANTS.O_TRUNC) && (flags & CONSTANTS.O_WRONLY)) {
             await this.empty_inode(inodenum);
             inode.filesize = 0;
         }
 
-        if (flags & O_APPEND)
-            flags |= O_WRONLY;
+        if (flags & CONSTANTS.O_APPEND)
+            flags |= CONSTANTS.O_WRONLY;
 
         var filedes = new FileDescriptor(
-            this, filename, inodenum, inode, flags & O_RDWR);
-        if (flags & O_APPEND)
+            this, filename, inodenum, inode, flags & CONSTANTS.O_RDWR);
+        if (flags & CONSTANTS.O_APPEND)
             filedes.offset = filedes.inode.filesize;
 
         return filedes;
@@ -652,9 +665,9 @@ class MyFS extends DefaultFS {
         if (buffer.BYTES_PER_ELEMENT != 1)
             return "EINVAL";
 
-        if (!is_write && !(filedes.mode & O_RDONLY))
+        if (!is_write && !(filedes.mode & CONSTANTS.O_RDONLY))
             return "EBADF";
-        else if (is_write && !(filedes.mode & O_WRONLY))
+        else if (is_write && !(filedes.mode & CONSTANTS.O_WRONLY))
             return "EBADF"
 
         var total_bytes = buffer.length;

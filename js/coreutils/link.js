@@ -1,8 +1,12 @@
+import {Shell} from '../shell.js'
+
+import {str_to_bytes} from '../fs_helper.js'
+
 Shell.prototype.handle_link = async function(command) {
     async function usage() {
         const help_msg =
             "link path1 path2\n" +
-            "\tMake a hard link to path1 at path2\n";
+            "	Make a hard link to path1 at path2\n";
         await this.filesystem.write(this.stderr, str_to_bytes(help_msg));
     }
 

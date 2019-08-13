@@ -1,3 +1,5 @@
+import {Shell} from '../shell.js'
+
 Shell.prototype.handle_echo = async function(command) {
     var error = null;
     for (var i = 1; i < command.arguments.length; i++) {

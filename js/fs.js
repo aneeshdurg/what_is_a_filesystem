@@ -1,4 +1,7 @@
-class DefaultFS {
+import {not_implemented} from './fs_helper.js'
+import {CONSTANTS} from './defs.js'
+
+export class DefaultFS {
     /**
      * Naming conventions:
      *
@@ -31,11 +34,11 @@ class DefaultFS {
         if (typeof(info) == 'string')
             return "EBADF"
 
-        if (whence == SEEK_SET)
+        if (whence == CONSTANTS.SEEK_SET)
             fd.offset = offset;
-        else if (whence == SEEK_CURR)
+        else if (whence == CONSTANTS.SEEK_CURR)
             fd.offset += offset;
-        else if (whence == SEEK_END)
+        else if (whence == CONSTANTS.SEEK_END)
             fd.offset = info.filesize + offset;
         else
             return "EINVAL";

@@ -1,3 +1,5 @@
+import {Shell} from '../shell.js'
+
 Shell.prototype.handle_rm = async function(command) {
   var recurse = false;
   var offset = 1;

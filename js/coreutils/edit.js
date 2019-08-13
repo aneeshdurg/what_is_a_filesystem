@@ -1,8 +1,13 @@
+import {Shell} from '../shell.js'
+
+import {CONSTANTS} from '../defs.js'
+import {bytes_to_str, str_to_bytes} from '../fs_helper.js'
+
 Shell.prototype.handle_edit = async function (command) {
     async function help() {
         const help_msg =
             "edit path\n" +
-            "\t Opens the file at `path` for editing.\n";
+            "	 Opens the file at `path` for editing.\n";
         await this.filesystem.write(this.stderr, str_to_bytes(help_msg));
     }
 
@@ -23,7 +28,7 @@ Shell.prototype.handle_edit = async function (command) {
         filesize = info.filesize;
     }
 
-    var file = await this.filesystem.open(path, O_RDWR | O_CREAT, this.umask);
+    var file = await this.filesystem.open(path, CONSTANTS.O_RDWR | CONSTANTS.O_CREAT, this.umask);
     if (typeof(file) === 'string')
         return this.return_error(file);
 
@@ -40,7 +45,7 @@ Shell.prototype.handle_edit = async function (command) {
         return 0;
     }
 
-    await this.filesystem.seek(file, 0, SEEK_SET);
+    await this.filesystem.seek(file, 0, CONSTANTS.SEEK_SET);
     var bytes_written = await this.filesystem.write(file, str_to_bytes(new_data));
     if (typeof(bytes_written) === 'string')
         return this.return_error("Could not write to file (" + bytes_written + ")");

@@ -1,9 +1,31 @@
 describe("Test Shell Commands", function () {
+    async function imports() {
+        await _import({
+            src: '/__src__/js/defs.js',
+            name: ['CONSTANTS']});
+
+        await _import({
+            src: '/__src__/js/lfs.js',
+            name: 'LayeredFilesystem'});
+
+        await _import({
+            src: '/__src__/js/shell.js',
+            name: ['Shell', 'Command']});
+
+        await _import({
+            src: '/__src__/js/fs_helper.js',
+            name: 'str_to_bytes'});
+    }
+
+    beforeAll(async () => {
+        await imports();
+    });
+
     it("tests cat", async function() {
         // create file with some expected contents
         var shell = await get_shell();
         var expected_str = "Hello data!";
-        var fd = await shell.filesystem.open("/test_file", O_CREAT | O_WRONLY, 0o777);
+        var fd = await shell.filesystem.open("/test_file", CONSTANTS.O_CREAT | CONSTANTS.O_WRONLY, 0o777);
         expect(typeof(fd)).not.toBe('string');
 
         var error = await shell.filesystem.write(fd, str_to_bytes(expected_str));

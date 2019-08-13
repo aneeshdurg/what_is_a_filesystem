@@ -1,8 +1,9 @@
 // requires fs.js
-// import * from 'fs.js'
-// import * from 'fs_helper.js'
+import {DefaultFS} from './fs.js'
+import {MyFS} from './myfs.js'
+import {CONSTANTS} from './defs.js'
 
-class LayeredFilesystem extends DefaultFS {
+export class LayeredFilesystem extends DefaultFS {
     constructor(rootfs, canvas) {
         super();
         this.mountpoints = {};

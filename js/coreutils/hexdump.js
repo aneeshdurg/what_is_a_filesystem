@@ -1,3 +1,8 @@
+import {Shell} from '../shell.js'
+
+import {CONSTANTS, IOCTL_IS_TTY} from '../defs.js'
+import {str_to_bytes} from '../fs_helper.js'
+
 Shell.prototype.handle_hexdump = async function(command) {
     // Make sure we have the right prog name
     command.arguments[0] = "hexdump";
@@ -22,7 +27,7 @@ Shell.prototype.handle_hexdump_or_read = async function(command) {
     for (var i = 1; i < command.arguments.length; i++) {
         var bytes_to_read = _bytes_to_read;
         var filepath = this.expand_path(command.arguments[i]);
-        var file = await this.filesystem.open(filepath, O_RDONLY);
+        var file = await this.filesystem.open(filepath, CONSTANTS.O_RDONLY);
         if (typeof(file) === 'string')
             return this.return_error(
                 'Could not open file ' + command.arguments[i] + ' (' + file + ')');

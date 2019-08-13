@@ -5,6 +5,24 @@ function TestEnv(container, fs, shell) {
 };
 
 describe("Test Shell UI/input features" , function() {
+    async function imports() {
+        await _import({
+            src: '/__src__/js/lfs.js',
+            name: 'LayeredFilesystem'});
+
+        await _import({
+            src: '/__src__/js/shell.js',
+            name: 'Shell'});
+
+        await _import({
+            src: '/__src__/js/fs_helper.js',
+            name: 'bytes_to_str'});
+    }
+
+    beforeAll((done) => {
+        imports().then(done);
+    });
+
     var test_env = null;
     beforeEach(function () {
         var container = document.createElement("div");

@@ -1,8 +1,12 @@
+import {Shell} from '../shell.js'
+
+import {str_to_bytes} from '../fs_helper.js'
+
 Shell.prototype.handle_chmod = async function(command) {
     async function help_msg() {
         const help_msg =
             "chmod permissions filename\n" +
-            "\tmodify permissions of filename to be permissions\n";
+            "	modify permissions of filename to be permissions\n";
         await this.filesystem.write(this.stderr, str_to_bytes(help_msg));
         return 0;
     }

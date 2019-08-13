@@ -1,10 +1,14 @@
+import {Shell} from '../shell.js'
+
+import {CONSTANTS, IOCTL_SELECT_INODE} from '../defs.js'
+
 Shell.prototype.handle_inodeinfo = async function(command) {
     if (command.arguments.length != 2) {
         return this.return_error("inodeinfo expects exactly one filename as an argument!");
     }
 
     var path = this.expand_path(command.arguments[1]);
-    var file = await this.filesystem.open(path, O_RDONLY);
+    var file = await this.filesystem.open(path, CONSTANTS.O_RDONLY);
     if (typeof(file) === 'string')
         return this.return_error("Could not open " + command.arguments[1] + "(" + file + ")");
 

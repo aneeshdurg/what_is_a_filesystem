@@ -1,4 +1,14 @@
 describe("Test Command parser", function() {
+    async function imports() {
+        await _import({
+            src: '/__src__/js/shell.js',
+            name: 'Command'});
+    }
+
+    beforeAll((done) => {
+        imports().then(done);
+    });
+
     it("tests a basic command", function() {
         var cmd = Command.parse_command("cat hello_world.txt");
         expect(cmd.arguments).toEqual(["cat", "hello_world.txt"]);
