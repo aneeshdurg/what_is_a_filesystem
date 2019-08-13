@@ -123,9 +123,6 @@ In our simiulator the filesystem acts similar to how a filesystem in the kernel 
 (a series of functions that can are run in the context of a running filesystem process via [IPC](https://github.com/illinois-cs241/coursebook/wiki/Ipc)).
 
 
-<script>
-var load_solution = function(){}
-</script>
 <script type="module">
 import {Stat, FileDescriptor} from "{{ '/js/defs.js' | relative_url }}"
 import {DefaultFS} from "{{ '/js/fs.js' | relative_url }}"

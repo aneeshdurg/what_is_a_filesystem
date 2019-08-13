@@ -36,20 +36,7 @@ Luckily for us, this number is usually high enough that it's unlikely you'd ever
 Let's take a look at an example.
  
 <canvas id="canvas_1"></canvas>
-<script>
-var canvas_1 = create_canvas('canvas_1');
-var fs_1 = new MyFS(canvas_1);
-fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-    duration: 10,
-    save: false,
-});
-(async function() {
-    await fs_1.create("/file", 0o777);
-    await fs_1.truncate("/file", 32);
-    var file = await fs_1.open("/file", O_RDONLY);
-    await fs_1.ioctl(file, IOCTL_SELECT_INODE);
-})();
-</script>
+<script type="module" src="{{ '/js/pages/05-inodes/1.js' | relative_url }}"></script>
 
 In this filesystem each block is 16B.
 The inode table is represented by the smaller slots on the left and the larger blocks on the right are regular disk blocks.
@@ -59,26 +46,7 @@ These refer to the structures that store the block indicies used by this file.
 
 Here you can see another example where we have a file who's contents are not contiguously stored on disk.
 <canvas id="canvas_2"></canvas>
-<script>
-var canvas_2 = create_canvas('canvas_2');
-var fs_2 = new MyFS(canvas_2);
-fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-    duration: 10,
-    save: false,
-});
-
-var setup_2 = (async function() {
-    await fs_2.create("/file", 0o777);
-    await fs_2.truncate("/file", 16);
-
-    await fs_2.create("/file1", 0o777);
-    await fs_2.truncate("/file1", 16);
-
-    await fs_2.truncate("/file", 48);
-    var file = await fs_2.open("/file", O_RDONLY);
-    await fs_2.ioctl(file, IOCTL_SELECT_INODE);
-})();
-</script>
+<script type="module" src="{{ '/js/pages/05-inodes/2.js' | relative_url }}"></script>
 
 When reading from this non-contiguous file, the `read` command will give us access to a stream of data and
 will create the illusion that the file is one continous entity by seamlessly (ignoring disk performance) concatenating the data from one block with the data from the next block.
@@ -108,24 +76,7 @@ In our filesystem, each block index is just 1 byte so an indirect block can stor
 Let's take a look at how the indirect block of our 48 byte file above looks.
 
 <pre id="info">Loading...</pre>
-<script>
-(async function() {
-    await setup_2;
-    var file = await fs_2.open("/file", O_RDONLY);
-    var indirect = fs_2._inodes[file.inodenum].indirect[0];
-    var disk_offset = indirect * fs_2.block_size;
-    var disk_block = new Uint8Array(fs_2.disk, disk_offset, fs_2.block_size);
-    var block_contents = Array.from(disk_block)
-        .map(x => x.toString(16).padStart(2, '0'))
-        .join(' ');
-    var info_str =
-        "Inode " + file.inodenum + ":\n" +
-        "\tfilesize: " + fs_2._inodes[file.inodenum].filesize + "\n" +
-        "\tindirect: " + indirect + "\n" +
-        "\tcontents: " + block_contents + "\n";
-    document.getElementById('info').textContent = info_str;
-})();
-</script>
+<script type="module" src="{{ '/js/pages/05-inodes/3.js' | relative_url }}"></script>
 
 As we can see, the indirect block contains 16 entries of which one is set to be block 6.
 Note that 0 is a valid block number and the only way we can tell whether a block is filled in or not is to use the filesize.
@@ -146,30 +97,7 @@ Every time a disk block is read it will flash. Try to guess which block is the i
 <canvas id="canvas_3"></canvas>
 <br>
 <button onclick="run_disk_read()">Read file</button>
-<script>
-var canvas_3 = create_canvas('canvas_3');
-var fs_3 = new MyFS(canvas_3);
-var setup_3 = (async function() {
-    fs_3.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
-        duration: 10,
-        save: false,
-    });
-    await fs_3.create("/file", 0o777);
-    await fs_3.truncate("/file", fs_3.max_filesize);
-    fs_3.animations.reload_duration();
-})();
-var running = false;
-async function run_disk_read() {
-    if (running)
-        return;
-    running = true;
-    await setup_3;
-    var buffer = new Uint8Array(new ArrayBuffer(fs_3.max_filesize));
-    var file = await fs_3.open("/file", O_RDONLY);
-    await fs_3.read(file, buffer);
-    running = false;
-};
-</script>
+<script type="module" src="{{ '/js/pages/05-inodes/4.js' | relative_url }}"></script>
 
 Try running it a few times if you didn't spot it.
 
