@@ -1,7 +1,15 @@
+---
+---
+import * as myfs from "{{ '/js/myfs.js' | relative_url }}"
+
+import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.js' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
+import {Shell, Command} from "{{ '/js/shell.js' | relative_url }}"
+
 var fs = null;
 var shell = null;
 
-function setup() {
+window.setup = function() {
     var controls = document.getElementById('controls');
     controls.style.display = "none";
 
@@ -87,10 +95,10 @@ function setup() {
         await sleep(500);
         shell.simulate_input("\n");
         // Set disk animation params
-        fs.ioctl(null, IOCTL_RESET_ANIMATION_DURATION);
-        fs.ioctl(null, IOCTL_SET_DISK_PTR_POS, {pos: 0});
-        fs.ioctl(null, IOCTL_SET_DISK_PTR_SPEED, {speed: 0.5});
-        fs.ioctl(null, IOCTL_ENABLE_DISK_PTR);
+        fs.ioctl(null, myfs.IOCTL_RESET_ANIMATION_DURATION);
+        fs.ioctl(null, myfs.IOCTL_SET_DISK_PTR_POS, {pos: 0});
+        fs.ioctl(null, myfs.IOCTL_SET_DISK_PTR_SPEED, {speed: 0.5});
+        fs.ioctl(null, myfs.IOCTL_ENABLE_DISK_PTR);
         // Allow user interaction
         canvas_container.style.height = "";
         shell.reenable_container_event_listeners();
@@ -116,8 +124,8 @@ function if_fs(fn) {
 var cache_timer = null;
 var cache_size = 8;
 
-var enable_cache = if_fs(function (e) {
-    fs.ioctl(null, IOCTL_ENABLE_CACHE);
+window.enable_cache = if_fs(function (e) {
+    fs.ioctl(null, myfs.IOCTL_ENABLE_CACHE);
 
     console.log(e);
     var btn = e.target;
@@ -130,15 +138,15 @@ var enable_cache = if_fs(function (e) {
     var contents = document.getElementById('cache_contents');
 
     cache_timer = setInterval(async () => {
-        contents.innerHTML = "Cache: [" + await fs.ioctl(null, IOCTL_GET_CACHE_CONTENTS) + "]";
+        contents.innerHTML = "Cache: [" + await fs.ioctl(null, myfs.IOCTL_GET_CACHE_CONTENTS) + "]";
     }, 100);
 });
 
-var disable_cache = if_fs(function (e) {
+window.disable_cache = if_fs(function (e) {
     cache_size = 8;
 
-    fs.ioctl(null, IOCTL_DISABLE_CACHE);
-    fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: cache_size});
+    fs.ioctl(null, myfs.IOCTL_DISABLE_CACHE);
+    fs.ioctl(null, myfs.IOCTL_SET_CACHE_SIZE, {size: cache_size});
 
     if (cache_timer) {
         clearTimeout(cache_timer);
@@ -156,20 +164,20 @@ var disable_cache = if_fs(function (e) {
     contents.innerHTML = "";
 });
 
-var increase_cache = if_fs(function () {
-    fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: ++cache_size});
+window.increase_cache = if_fs(function () {
+    fs.ioctl(null, myfs.IOCTL_SET_CACHE_SIZE, {size: ++cache_size});
 });
 
-var decrease_cache = if_fs(function () {
-    fs.ioctl(null, IOCTL_SET_CACHE_SIZE, {size: --cache_size});
+window.decrease_cache = if_fs(function () {
+    fs.ioctl(null, myfs.IOCTL_SET_CACHE_SIZE, {size: --cache_size});
 });
 
-var defragment = if_fs(async function () {
+window.defragment = if_fs(async function () {
     var btn = document.getElementById('defragment');
     btn.disabled = true;
 
     shell.remove_container_event_listeners();
-    await fs.ioctl(null, IOCTL_DEFRAG);
+    await fs.ioctl(null, myfs.IOCTL_DEFRAG);
     shell.reenable_container_event_listeners();
 
     btn.disabled = false;

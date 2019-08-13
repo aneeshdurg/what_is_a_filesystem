@@ -3,6 +3,8 @@ layout: post
 title: "Disk Latency"
 ---
 
+<script type="module" src="{{ '/js/pages/11-disk-latency.js' | relative_url }}"></script>
+
 Up till now we've assumed that we can jump around the disk for free.
 In the real world this assumption doesn't hold up for all storage mediums.
 For many technologies, such as HDDs that rely on spinning disks, there is a cost to non-sequential access.
@@ -26,7 +28,6 @@ Press `reset` to reset the state of the filesystem.
 <button onclick='setup()'>Reset</button>
 <button id='cache_btn' onclick='enable_cache()'>Enable Cache</button>
 <button id='defragment' onclick='defragment()'>Defragment</button>
-<script src="{{ '/js/pages/disk_latency.js' | relative_url }}"></script>
 </div>
 
 For example, try measuiring the difference between the time taken to read
