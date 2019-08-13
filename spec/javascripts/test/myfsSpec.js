@@ -1,15 +1,15 @@
 describe("Test MyFS", function() {
     async function imports() {
         await _import({
-            src: '/__src__/js/myfs.js',
+            src: '/__src__/js/myfs.mjs',
             name: ['MyFS', 'IOCTL_DEFRAG']});
 
         await _import({
-            src: '/__src__/js/defs.js',
+            src: '/__src__/js/defs.mjs',
             name: ['CONSTANTS', 'IOCTL_SELECT_INODE', 'IOCTL_IS_TTY']});
 
         await _import({
-            src: '/__src__/js/fs_helper.js',
+            src: '/__src__/js/fs_helper.mjs',
             name: ['bytes_to_str', 'str_to_bytes']});
     }
 

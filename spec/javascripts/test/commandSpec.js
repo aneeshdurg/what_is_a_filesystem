@@ -1,7 +1,7 @@
 describe("Test Command parser", function() {
     async function imports() {
         await _import({
-            src: '/__src__/js/shell.js',
+            src: '/__src__/js/shell.mjs',
             name: 'Command'});
     }
 

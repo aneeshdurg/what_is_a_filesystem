@@ -19,7 +19,7 @@ This is achieved either via the `mount` system call, or the `mount` utility.
 
 With something like `FUSE` that operates in userspace, when mounted, a program is started in userspace which handles all the filesystem callbacks.
 
-You can see an example of how we implemented mounting in our simulator at this file: [/js/lfs.js]({{ '/js/lfs.js' | relative_url }}).
+You can see an example of how we implemented mounting in our simulator at this file: [/js/lfs.mjs]({{ '/js/lfs.mjs' | relative_url }}).
 
 ## Writing our own filesystem!
 
@@ -43,9 +43,9 @@ Don't worry if you don't know javascript (I'm most certainly not an expert mysel
 Let's take a look at the default filesystem interface that we'll be deriving our filesystem from.
 <pre id="defaultfs">Loading...</pre>
 <script type="module">
-import {bytes_to_str} from "{{ '/js/fs_helper.js' | relative_url }}"
+import {bytes_to_str} from "{{ '/js/fs_helper.mjs' | relative_url }}"
 async function setup_defaultfs() {
-    var request = await fetch("{{ '/js/fs.js' | relative_url }}");
+    var request = await fetch("{{ '/js/fs.mjs' | relative_url }}");
     var reader = request.body.getReader();
     var target = document.getElementById("defaultfs");
     var first = true;
@@ -129,7 +129,7 @@ We don't need to implement `mount` or `umount` (we already have a filesystem tha
 We can ignore `ioctl`, a filesystem operation that's used to managed devices.
 We can use the default implementation of `seek`. Everything else has to be implemented by us.
 
-We've provided several helper functions in [/js/fs_helper.js]({{ '/js/fs_helper.js' | relative_url }}) and some helpful definitions in [/js/defs.js]({{ '/js/defs.js' | relative_url }}).
+We've provided several helper functions in [/js/fs_helper.mjs]({{ '/js/fs_helper.mjs' | relative_url }}) and some helpful definitions in [/js/defs.mjs]({{ '/js/defs.mjs' | relative_url }}).
 
 To kick things off, let's inherit the FS interface from `DefaultFS` and import
 in files that we'll be using.
@@ -144,7 +144,7 @@ import {
     FileDescriptor, // Constructor for the object returned by open
     Dirent, // Constructor for the objects returned by readdir
     Stat, // Constructor for the object returned by stat
-} from '/js/defs.js'
+} from '/js/defs.mjs'
 
 // Some useful filesystem-agnostic helper functions
 import {
@@ -152,9 +152,9 @@ import {
     not_implemented,
     bytes_to_str,
     str_to_bytes,
-} from '/js/fs_helper.js'
+} from '/js/fs_helper.mjs'
 
-import {DefaultFS} from '/js/fs.js'
+import {DefaultFS} from '/js/fs.mjs'
 
 class MemFS extends DefaultFS {}
 ```
@@ -314,7 +314,7 @@ This would be a good time to try writing some tests.
 Go back and copy all the blocks of code you've written so far into a text editor of your choice and save the file with the extension `.js`.
 You may need to do a bit of digging on how to write some barebones HTML, but try to setup an environment to hack in/test the code you've written so far.
 
-Take a moment to look at [fs_helper.js](/js/fs_helper.js).
+Take a moment to look at [fs_helper.mjs](/js/fs_helper.mjs).
 Methods like `split_parent_of` will be really useful going forward!
 
 Now, we can move on to some meatier functions, creating files and directories.
@@ -385,7 +385,7 @@ MemFS.prototype.mkdir = function (path, mode) {
 </details>
 
 Now we can implement `readdir`.
-`readdir` returns an array of `Dirent`s (see [defs.js](/js/defs.js)).
+`readdir` returns an array of `Dirent`s (see [defs.mjs](/js/defs.mjs)).
 Just set `inodenum` to any number you want, since we don't have any use for an inode number in this filesystem.
 To do so, we must keep in mind that we also need to provide the entries for `.` and `..`.
 
@@ -516,7 +516,7 @@ MemFS.prototype.chmod = function (path, permissions) {
 </details>
 
 Next, let's implement stat.
-To implement stat, simply return an instance of `Stat` from [/js/defs.js](/js/defs.js).
+To implement stat, simply return an instance of `Stat` from [/js/defs.mjs](/js/defs.mjs).
 `Stat` takes in many parameters in it's constructor.
 The order in which they should be passed in is specified by `_stat_params`.
 
@@ -593,12 +593,12 @@ To that, we first need to implement `open` and `close`.
 
 We'll ignore implementing `close` and rely on javascript's "garbage collection" to get rid of the file descriptors for us.
 
-`open` returns a `FileDescriptor` as defined in [/js/defs.js](/js/defs.js).
+`open` returns a `FileDescriptor` as defined in [/js/defs.mjs](/js/defs.mjs).
 While we don't need a real value for `inodenum`, set `inode` to be the `File` (or `Directory`) corresponding to the provided path.
 Make sure to set `fs` parameter to `this`.
 Set the `mode` parameter to be `flags`.
 
-note that the `flags` parameters will be a set of flags from [/js/defs.js](/js/defs.js) that start with `O_` and are `or`'d together.
+note that the `flags` parameters will be a set of flags from [/js/defs.mjs](/js/defs.mjs) that start with `O_` and are `or`'d together.
 These flags are present as members of the `CONSTANTS` class.
 To find out if a particular flag, se `CONSTANTS.O_APPEND` is present, check the output of `(flags & CONSTANTS.O_APPEND)`.
 If `CONSTANTS.O_CREAT` is passed in check if `mode` is truthy, if not, fail and return `"EINVAL"`, if it is, call `create` with `path` and `mode` (make sure to ignore the error 'EEXISTS').

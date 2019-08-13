@@ -1,7 +1,7 @@
-// requires fs.js
-import {DefaultFS} from './fs.js'
-import {MyFS} from './myfs.js'
-import {CONSTANTS} from './defs.js'
+// requires fs.mjs
+import {DefaultFS} from './fs.mjs'
+import {MyFS} from './myfs.mjs'
+import {CONSTANTS} from './defs.mjs'
 
 export class LayeredFilesystem extends DefaultFS {
     constructor(rootfs, canvas) {

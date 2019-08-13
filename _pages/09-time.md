@@ -29,8 +29,8 @@ Try the following experiment:
 
 <div id='shell'></div>
 <script type="module">
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell"));;
 shell.main("{{ site.baseurl }}");
 </script>

@@ -1,8 +1,8 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
-import {DefaultFS} from '../fs.js'
-import {str_to_bytes} from '../fs_helper.js'
-import {Command} from '../shell.js'
+import {DefaultFS} from '../fs.mjs'
+import {str_to_bytes} from '../fs_helper.mjs'
+import {Command} from '../shell.mjs'
 
 Shell.prototype.handle_mount = async function(command) {
     async function help() {

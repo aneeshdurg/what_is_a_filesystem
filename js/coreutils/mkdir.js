@@ -1,4 +1,4 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
 Shell.prototype.handle_mkdir = async function (command) {
     var errors = "";

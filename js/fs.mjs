@@ -1,5 +1,5 @@
-import {not_implemented} from './fs_helper.js'
-import {CONSTANTS} from './defs.js'
+import {not_implemented} from './fs_helper.mjs'
+import {CONSTANTS} from './defs.mjs'
 
 export class DefaultFS {
     /**

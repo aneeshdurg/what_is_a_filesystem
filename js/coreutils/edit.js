@@ -1,7 +1,7 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
-import {CONSTANTS} from '../defs.js'
-import {bytes_to_str, str_to_bytes} from '../fs_helper.js'
+import {CONSTANTS} from '../defs.mjs'
+import {bytes_to_str, str_to_bytes} from '../fs_helper.mjs'
 
 Shell.prototype.handle_edit = async function (command) {
     async function help() {

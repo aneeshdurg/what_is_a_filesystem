@@ -1,6 +1,6 @@
-import {DefaultFS} from './fs.js'
-import * as helper from './fs_helper.js'
-import {FSAnimator} from './animator.js'
+import {DefaultFS} from './fs.mjs'
+import * as helper from './fs_helper.mjs'
+import {FSAnimator} from './animator.mjs'
 import {
   CONSTANTS,
   Dirent,
@@ -9,7 +9,7 @@ import {
   IOCTL_IS_TTY,
   IOCTL_SELECT_INODE,
   Stat,
-} from './defs.js'
+} from './defs.mjs'
 
 export const IOCTL_SET_ANIMATION_DURATION = get_unused_ioctl_num();
 export const IOCTL_RESET_ANIMATION_DURATION = get_unused_ioctl_num();

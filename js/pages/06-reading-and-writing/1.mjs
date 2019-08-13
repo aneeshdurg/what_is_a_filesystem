@@ -1,10 +1,10 @@
 ---
 ---
-import {CONSTANTS} from "{{ '/js/defs.js' | relative_url }}"
-import {bytes_to_str} from "{{ '/js/fs_helper.js' | relative_url }}"
-import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.js' | relative_url }}"
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+import {CONSTANTS} from "{{ '/js/defs.mjs' | relative_url }}"
+import {bytes_to_str} from "{{ '/js/fs_helper.mjs' | relative_url }}"
+import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 export async function create_file_from_remote(fs, remote, local) {
     var request = await fetch(remote);

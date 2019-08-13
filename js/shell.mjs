@@ -1,10 +1,10 @@
-import {DefaultFS} from './fs.js'
-import {str_to_bytes} from './fs_helper.js'
+import {DefaultFS} from './fs.mjs'
+import {str_to_bytes} from './fs_helper.mjs'
 import {
   CONSTANTS,
   FileDescriptor,
   IOCTL_IS_TTY,
-} from './defs.js'
+} from './defs.mjs'
 
 // https://stackoverflow.com/a/13819253/5803067
 var isMobile = {

@@ -1,4 +1,4 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
 Shell.prototype.handle_read = async function(command) {
     // Make sure we have the right prog name

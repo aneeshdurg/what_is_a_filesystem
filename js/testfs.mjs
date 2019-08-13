@@ -1,4 +1,4 @@
-import {DefaultFS} from './fs.js'
+import {DefaultFS} from './fs.mjs'
 
 export class TestFS extends DefaultFS {}
 function TestFSSetup() {

@@ -1,6 +1,6 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
-import {str_to_bytes} from '../fs_helper.js'
+import {str_to_bytes} from '../fs_helper.mjs'
 
 Shell.prototype.handle_chmod = async function(command) {
     async function help_msg() {

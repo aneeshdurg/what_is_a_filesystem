@@ -1,7 +1,7 @@
 ---
 ---
-import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.js' | relative_url }}"
-import {CONSTANTS, IOCTL_SELECT_INODE} from "{{ '/js/defs.js' | relative_url }}"
+import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_url }}"
+import {CONSTANTS, IOCTL_SELECT_INODE} from "{{ '/js/defs.mjs' | relative_url }}"
 
 var canvas_1 = create_canvas('canvas_1');
 

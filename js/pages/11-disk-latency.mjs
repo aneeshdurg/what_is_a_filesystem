@@ -1,10 +1,10 @@
 ---
 ---
-import * as myfs from "{{ '/js/myfs.js' | relative_url }}"
+import * as myfs from "{{ '/js/myfs.mjs' | relative_url }}"
 
-import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.js' | relative_url }}"
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {Shell, Command} from "{{ '/js/shell.js' | relative_url }}"
+import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {Shell, Command} from "{{ '/js/shell.mjs' | relative_url }}"
 
 var fs = null;
 var shell = null;

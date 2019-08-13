@@ -1,8 +1,8 @@
 ---
 ---
-import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.js' | relative_url }}"
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 import {create_file_from_remote, run_cat_on_shell} from "./1.js"
 

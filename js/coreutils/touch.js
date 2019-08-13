@@ -1,6 +1,6 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
-import {CONSTANTS} from '../defs.js'
+import {CONSTANTS} from '../defs.mjs'
 
 Shell.prototype.handle_touch = async function(command) {
     if (command.arguments.length < 2)

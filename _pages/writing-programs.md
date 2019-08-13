@@ -35,7 +35,7 @@ Let's take a look at the components that make this possible.
 ## The Shell object
 
 Your program will be executed under the context of the shell.
-This means that `this` will refer to an instance of `Shell` from [/js/shell.js]({{ '/js/shell.js' | relative_url }}).
+This means that `this` will refer to an instance of `Shell` from [/js/shell.mjs]({{ '/js/shell.mjs' | relative_url }}).
 
 Below is a description of all availible attributes/functions you may use.
 Note that names with parentheses next to them are functions.

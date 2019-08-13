@@ -1,7 +1,7 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
-import {IOCTL_IS_TTY} from '../defs.js'
-import {str_to_bytes} from '../fs_helper.js'
+import {IOCTL_IS_TTY} from '../defs.mjs'
+import {str_to_bytes} from '../fs_helper.mjs'
 
 Shell.prototype.handle_clear = async function(command) {
     var out_is_stdout = await this.filesystem.ioctl(command.output, IOCTL_IS_TTY);

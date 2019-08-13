@@ -1,19 +1,19 @@
 describe("Test LFS", function() {
     async function imports() {
         await _import({
-            src: '/__src__/js/defs.js',
+            src: '/__src__/js/defs.mjs',
             name: ['CONSTANTS', 'FileDescriptor']});
 
         await _import({
-            src: '/__src__/js/lfs.js',
+            src: '/__src__/js/lfs.mjs',
             name: 'LayeredFilesystem'});
 
         await _import({
-            src: '/__src__/js/testfs.js',
+            src: '/__src__/js/testfs.mjs',
             name: 'TestFS'});
 
         await _import({
-            src: '/__src__/js/myfs.js',
+            src: '/__src__/js/myfs.mjs',
             name: 'MyFS'});
     }
 

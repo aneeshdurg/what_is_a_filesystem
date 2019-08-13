@@ -1,4 +1,4 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
 Shell.prototype.handle_cd = async function(command) {
     if (command.arguments.length == 1)

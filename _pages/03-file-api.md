@@ -124,10 +124,10 @@ In our simiulator the filesystem acts similar to how a filesystem in the kernel 
 
 
 <script type="module">
-import {Stat, FileDescriptor} from "{{ '/js/defs.js' | relative_url }}"
-import {DefaultFS} from "{{ '/js/fs.js' | relative_url }}"
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+import {Stat, FileDescriptor} from "{{ '/js/defs.mjs' | relative_url }}"
+import {DefaultFS} from "{{ '/js/fs.mjs' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 var shell = null;
 var fs = null;

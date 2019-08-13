@@ -1,6 +1,6 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
-import {CONSTANTS, IOCTL_SELECT_INODE} from '../defs.js'
+import {CONSTANTS, IOCTL_SELECT_INODE} from '../defs.mjs'
 
 Shell.prototype.handle_inodeinfo = async function(command) {
     if (command.arguments.length != 2) {

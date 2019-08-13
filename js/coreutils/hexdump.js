@@ -1,7 +1,7 @@
-import {Shell} from '../shell.js'
+import {Shell} from '../shell.mjs'
 
-import {CONSTANTS, IOCTL_IS_TTY} from '../defs.js'
-import {str_to_bytes} from '../fs_helper.js'
+import {CONSTANTS, IOCTL_IS_TTY} from '../defs.mjs'
+import {str_to_bytes} from '../fs_helper.mjs'
 
 Shell.prototype.handle_hexdump = async function(command) {
     // Make sure we have the right prog name

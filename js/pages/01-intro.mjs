@@ -1,9 +1,9 @@
 ---
 ---
-import {CONSTANTS} from "{{ '/js/defs.js' | relative_url }}"
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.js' | relative_url }}"
-import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+import {CONSTANTS} from "{{ '/js/defs.mjs' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 var animated_shell = null;
 var animated_fs = null;

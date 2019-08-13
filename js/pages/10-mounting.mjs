@@ -9,7 +9,7 @@ import {
     FileDescriptor, // Constructor for the object returned by open
     Dirent, // Constructor for the objects returned by readdir
     Stat, // Constructor for the object returned by stat
-} from "{{ '/js/defs.js' | relative_url }}"
+} from "{{ '/js/defs.mjs' | relative_url }}"
 
 // Some useful filesystem-agnostic helper functions
 import {
@@ -17,11 +17,11 @@ import {
     not_implemented,
     bytes_to_str,
     str_to_bytes,
-} from "{{ '/js/fs_helper.js' | relative_url }}"
+} from "{{ '/js/fs_helper.mjs' | relative_url }}"
 
-import {DefaultFS} from "{{ '/js/fs.js' | relative_url }}"
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+import {DefaultFS} from "{{ '/js/fs.mjs' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 function get_merged_input(el) {
      var clone = el.cloneNode(true);

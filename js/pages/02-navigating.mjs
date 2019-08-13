@@ -1,8 +1,8 @@
 ---
 ---
-import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
-import {MyFS} from "{{ '/js/myfs.js' | relative_url }}"
-import {Shell} from "{{ '/js/shell.js' | relative_url }}"
+import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
+import {MyFS} from "{{ '/js/myfs.mjs' | relative_url }}"
+import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 window.onload = async function() {
     var fs = new MyFS();

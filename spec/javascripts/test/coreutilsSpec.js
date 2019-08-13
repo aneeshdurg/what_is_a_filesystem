@@ -1,19 +1,19 @@
 describe("Test Shell Commands", function () {
     async function imports() {
         await _import({
-            src: '/__src__/js/defs.js',
+            src: '/__src__/js/defs.mjs',
             name: ['CONSTANTS']});
 
         await _import({
-            src: '/__src__/js/lfs.js',
+            src: '/__src__/js/lfs.mjs',
             name: 'LayeredFilesystem'});
 
         await _import({
-            src: '/__src__/js/shell.js',
+            src: '/__src__/js/shell.mjs',
             name: ['Shell', 'Command']});
 
         await _import({
-            src: '/__src__/js/fs_helper.js',
+            src: '/__src__/js/fs_helper.mjs',
             name: 'str_to_bytes'});
     }
 

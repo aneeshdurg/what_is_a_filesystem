@@ -1,6 +1,6 @@
 ---
 ---
-import {CONSTANTS} from "{{ '/js/defs.js' | relative_url }}"
+import {CONSTANTS} from "{{ '/js/defs.mjs' | relative_url }}"
 
 import {fs_2, setup_2} from "./2.js"
 
