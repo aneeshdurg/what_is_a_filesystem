@@ -28,7 +28,9 @@ Try the following experiment:
 + Using `edit` or `cat` modify the file contents and then check the timestamps again.
 
 <div id='shell'></div>
-<script>
+<script type="module">
+import {LayeredFilesystem} from "{{ '/js/lfs.js' | relative_url }}"
+import {Shell} from "{{ '/js/shell.js' | relative_url }}"
 var shell = new Shell(new LayeredFilesystem(), document.getElementById("shell"));;
 shell.main("{{ site.baseurl }}");
 </script>
