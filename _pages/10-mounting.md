@@ -2,6 +2,7 @@
 layout: post
 title: "Mounting and managing filesystems"
 ---
+<script type="module" src="{{ '/js/pages/10-mounting.js' | relative_url }}"></script>
 
 ## What is __mounting__?
 
@@ -22,8 +23,6 @@ You can see an example of how we implemented mounting in our simulator at this f
 
 ## Writing our own filesystem!
 
-<script src="{{ '/js/pages/merge_memfs.js' | relative_url }}"></script>
-
 Way back in [section 3]({{ '/_pages/03-file-api.html' | relative_url }}) you wrote a mini filesystem that provided a single virtual file and implemented `read` and `write` for that file.
 Since then, you've hopefully learned a lot about how filesystems are structured and what the various callbacks provide,
 so let's revist the topic of writing filesystems and write a simple filesystem that can actually be used to store data.
@@ -43,7 +42,8 @@ Don't worry if you don't know javascript (I'm most certainly not an expert mysel
 
 Let's take a look at the default filesystem interface that we'll be deriving our filesystem from.
 <pre id="defaultfs">Loading...</pre>
-<script>
+<script type="module">
+import {bytes_to_str} from "{{ '/js/fs_helper.js' | relative_url }}"
 async function setup_defaultfs() {
     var request = await fetch("{{ '/js/fs.js' | relative_url }}");
     var reader = request.body.getReader();
@@ -130,9 +130,32 @@ We can ignore `ioctl`, a filesystem operation that's used to managed devices.
 We can use the default implementation of `seek`. Everything else has to be implemented by us.
 
 We've provided several helper functions in [/js/fs_helper.js]({{ '/js/fs_helper.js' | relative_url }}) and some helpful definitions in [/js/defs.js]({{ '/js/defs.js' | relative_url }}).
-To kick things off, let's inherit the FS interface from `DefaultFS`.
+
+To kick things off, let's inherit the FS interface from `DefaultFS` and import
+in files that we'll be using.
 
 ```javascript
+// Import definitions of various structs/constants
+import {
+    get_unused_ioctl_num, // function for generating ioctl numbers (we won't be using it)
+    IOCTL_IS_TTY, // ioctl used by various shell utilities (we won't be using it)
+    IOCTL_SELECT_INODE, // ioctl used by inodeinfo (we won't be using it)
+    CONSTANTS, // Collection of constants (like permission flags)
+    FileDescriptor, // Constructor for the object returned by open
+    Dirent, // Constructor for the objects returned by readdir
+    Stat, // Constructor for the object returned by stat
+} from '/js/defs.js'
+
+// Some useful filesystem-agnostic helper functions
+import {
+    split_parent_of,
+    not_implemented,
+    bytes_to_str,
+    str_to_bytes,
+} from '/js/fs_helper.js'
+
+import {DefaultFS} from '/js/fs.js'
+
 class MemFS extends DefaultFS {}
 ```
 
@@ -390,7 +413,7 @@ MemFS.prototype.readdir = function (path) {
         new Dirent(0, '.'),
         new Dirent(0, '..')];
 
-    for (e of Object.getOwnPropertyNames(file.files))
+    for (let e of Object.getOwnPropertyNames(file.files))
         entries.push(new Dirent(0, e));
 
     file.atim = Date.now();
@@ -576,21 +599,22 @@ Make sure to set `fs` parameter to `this`.
 Set the `mode` parameter to be `flags`.
 
 note that the `flags` parameters will be a set of flags from [/js/defs.js](/js/defs.js) that start with `O_` and are `or`'d together.
-To find out if a particular flag, se `O_APPEND` is present, check the output of `(flags & O_APPEND)`.
-If `O_CREAT` is passed in check if `mode` is truthy, if not, fail and return `"EINVAL"`, if it is, call `create` with `path` and `mode` (make sure to ignore the error 'EEXISTS').
+These flags are present as members of the `CONSTANTS` class.
+To find out if a particular flag, se `CONSTANTS.O_APPEND` is present, check the output of `(flags & CONSTANTS.O_APPEND)`.
+If `CONSTANTS.O_CREAT` is passed in check if `mode` is truthy, if not, fail and return `"EINVAL"`, if it is, call `create` with `path` and `mode` (make sure to ignore the error 'EEXISTS').
 
-If `O_APPEND` is passed in, set the offset in the file descriptor to be equal to  the size of the file.
+If `CONSTANTS.O_APPEND` is passed in, set the offset in the file descriptor to be equal to  the size of the file.
 
-If `O_WRONLY` is passed in, check if the file has write permissions set.
+If `CONSTANTS.O_WRONLY` is passed in, check if the file has write permissions set.
 If not, return `"EPERM"`.
 
-If `O_RDONLY` is passed in, check if the file has read permissions set.
+If `CONSTANTS.O_RDONLY` is passed in, check if the file has read permissions set.
 If not, return `"EPERM"`.
 
-If `O_TRUNC` is passed in and `O_WRONLY` is passed in truncate the file to size 0 first.
-If `O_WRONLY` is not passed in, return `"EINVAL"`.
+If `CONSTANTS.O_TRUNC` is passed in and `CONSTANTS.O_WRONLY` is passed in truncate the file to size 0 first.
+If `CONSTANTS.O_WRONLY` is not passed in, return `"EINVAL"`.
 
-If `O_DIRECTORY` is passed in and the file is not a directory, return "EINVAL".
+If `CONSTANTS.O_DIRECTORY` is passed in and the file is not a directory, return "EINVAL".
 
 <pre id="open_memfs">
 MemFS.prototype.open = function (path, flags, mode) {
@@ -603,7 +627,7 @@ cache_input("open_input");
 <details><summary>Solution</summary>
 <pre id="open_soln">
 MemFS.prototype.open = function (path, flags, mode) {
-    if (flags & O_CREAT) {
+    if (flags & CONSTANTS.O_CREAT) {
         if (!mode)
             return "EINVAL";
         var error = this.create(path, mode);
@@ -615,8 +639,8 @@ MemFS.prototype.open = function (path, flags, mode) {
     if (typeof(file) === 'string')
         return file;
 
-    if (flags & O_TRUNC) {
-        if (!(flags & O_WRONLY))
+    if (flags & CONSTANTS.O_TRUNC) {
+        if (!(flags & CONSTANTS.O_WRONLY))
             return "EINVAL";
 
         var error = this.truncate(path, 0);
@@ -624,18 +648,18 @@ MemFS.prototype.open = function (path, flags, mode) {
             return error;
     }
 
-    if ((flags & O_DIRECTORY) && !(file instanceof Directory))
+    if ((flags & CONSTANTS.O_DIRECTORY) && !(file instanceof Directory))
         return "ENOTDIR";
 
-    if ((flags & O_WRONLY)  && !(file.permissions & 0o200))
+    if ((flags & CONSTANTS.O_WRONLY)  && !(file.permissions & 0o200))
         return "EPERM";
 
-    if ((flags & O_RDONLY)  && !(file.permissions & 0o400))
+    if ((flags & CONSTANTS.O_RDONLY)  && !(file.permissions & 0o400))
         return "EPERM";
 
 
-    var fd = new FileDescriptor(this, path, 0, file, flags & O_RDWR);
-    if (flags & O_APPEND)
+    var fd = new FileDescriptor(this, path, 0, file, flags & CONSTANTS.O_RDWR);
+    if (flags & CONSTANTS.O_APPEND)
         fd.offset = file.data.length;
 
     return fd;
@@ -720,27 +744,9 @@ MemFS.prototype.write = function (fd, buffer) {
 </details>
 
 ## MemFS
+<h2 id="shell_type"></h2>
 <div id="shell_parent"></div>
 <br>
 <br>
 <button onclick="load_memfs(false)">Load MemFS from input</button>
 <button onclick="load_memfs(true)">Load MemFS from solutions</button>
-<script>
-var loaded = false;
-var lfs = null;
-var MemFS = null;
-function load_memfs(use_soln) {
-    if (loaded)
-        return;
-    MemFS = get_memfs_from_inputs(use_soln);
-    if (MemFS) {
-        lfs = new LayeredFilesystem(new MemFS());
-        document.getElementById("shell_parent").innerHTML = "Loading...";
-        setTimeout(function() {
-          document.getElementById("shell_parent").innerHTML = "";
-          var shell = new Shell(lfs, document.getElementById("shell_parent"));
-          shell.main("{{ site.baseurl }}");
-        }, 250); // Delaying for 250ms to make it seem like something is happening
-    }
-}
-</script>
