@@ -18,9 +18,42 @@ class ReadTask extends Task {
 
 export class FSAnimator {
     constructor(fs, canvas, block_limit) {
+        var that = this;
+
         this.canvas = canvas;
+        this.canvas.onclick = async function (event) {
+            // https://stackoverflow.com/a/18053642/5803067
+            const rect = that.canvas.getBoundingClientRect()
+            const x = event.clientX - rect.left
+            const y = event.clientY - rect.top
+
+            if (y > (that.canvas.height / 2)) {
+                that.selected_inode = null;
+                return;
+            }
+
+            if (x < (that.canvas.width * that.inode_space) ) {
+                // clicked on an inode
+                const inodenum = Math.floor(x / that.inode_width);
+                const inode = that.fs.inodes[inodenum];
+                that.select_inode(inodenum, inode);
+            } else {
+                // clicked on a block
+                this._disable = true;
+                const blocknum = Math.floor((x - (that.canvas.width * that.inode_space)) / that.block_width);
+                const lookup = await that.fs.get_inode_from_blocknum(blocknum);
+                if (lookup) {
+                    console.log(lookup);
+                    that.select_inode(lookup.inodenum, lookup.inode);
+                } else {
+                    that.selected_inode = null;
+                }
+
+                this._disable = false;
+            }
+        }
         this.ctx = canvas.getContext("2d");
-        this.fs = fs;
+        this.fs = fs; // instance of MyFS
         if (!block_limit)
             block_limit = 50
         this.inode_space = 0.35;
@@ -33,6 +66,8 @@ export class FSAnimator {
 
         this.registered_inodes = {};
         this.registered_blocks = {};
+        this.registered_colors = new Set();
+
         this.register_inode(0);
 
         this.reading_blocks = [];
@@ -52,6 +87,8 @@ export class FSAnimator {
         this.duration = null;
         this.timer = null;
         this.reload_duration();
+
+        this._disable = false;
     }
 
     setup_cache() {
@@ -192,6 +229,8 @@ export class FSAnimator {
     }
 
     async submitTask(callback){
+        if (this._disable)
+            return;
         var promise_collector = []
         var p = new Promise(resolve => promise_collector.push(resolve));
         while (promise_collector.length == 0) {};
@@ -202,6 +241,8 @@ export class FSAnimator {
     }
 
     async submitReadTask(blocknum, is_write){
+        if (this._disable)
+            return;
         var promise_collector = []
         var p = new Promise(resolve => promise_collector.push(resolve));
         while (promise_collector.length == 0) {};
@@ -231,7 +272,10 @@ export class FSAnimator {
 
     async deregister_inode(inodenum){
         function callback(){
-            this.registered_inodes[inodenum] = null;
+            if (this.registered_inodes[inodenum]) {
+                this.registered_colors.delete(this.registered_inodes[inodenum]);
+                this.registered_inodes[inodenum] = null;
+            }
         }
         await this.submitTask(callback);
     }
@@ -248,7 +292,15 @@ export class FSAnimator {
 
     async register_inode(inodenum){
         function callback(){
-            var color = this.getRandomColor();
+            var color = null;
+            while (true) {
+                color = this.getRandomColor();
+                if (this.registered_colors.has(color))
+                    continue
+
+                this.registered_colors.add(color);
+                break;
+            }
             this.registered_inodes[inodenum] = color;
         }
         var p = this.submitTask(callback);

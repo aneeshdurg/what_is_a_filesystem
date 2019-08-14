@@ -748,7 +748,7 @@ export class MyFS extends DefaultFS {
         return this.read_or_write(filedes, buffer, false);
     }
 
-    async _get_inode_from_blocknum(block_num) {
+    async get_inode_from_blocknum(block_num) {
         for (var i = 0; i < this.inodes.length; i++) {
             var inode = this.inodes[i];
             if (!inode.num_links || !inode.filesize)
@@ -816,7 +816,7 @@ export class MyFS extends DefaultFS {
                         }
                     } else {
                         // swap blocks
-                        var target_res = await this._get_inode_from_blocknum(start_idx);
+                        var target_res = await this.get_inode_from_blocknum(start_idx);
 
                         if (target_res.is_indirect)
                             target_res.inode.indirect[0] = curr_block;
