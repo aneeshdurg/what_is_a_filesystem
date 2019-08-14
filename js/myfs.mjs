@@ -73,20 +73,20 @@ export class MyFS extends DefaultFS {
         this.num_inodes = 50;
 
         // In reality the inodes should be part of the disk, but that's too much work to implement
-        this._inodes = new Array(this.num_inodes);
+        this.inodes = new Array(this.num_inodes);
         for (var i = 0; i < this.num_inodes; i++) {
-            this._inodes[i] = new Inode();
+            this.inodes[i] = new Inode();
         }
 
         // Create inode for "/"
-        this._inodes[0].is_directory = true;
-        this._inodes[0].num_links = 1;
-        this._inodes[0].permissions = 0o755;
-        this._inodes[0].update_atim();
-        this._inodes[0].update_mtim();
-        this._inodes[0].update_ctim();
+        this.inodes[0].is_directory = true;
+        this.inodes[0].num_links = 1;
+        this.inodes[0].permissions = 0o755;
+        this.inodes[0].update_atim();
+        this.inodes[0].update_mtim();
+        this.inodes[0].update_ctim();
 
-        this.max_filesize = (this._inodes[0].num_indirect * this.block_size + this._inodes[0].num_direct) * this.block_size;
+        this.max_filesize = (this.inodes[0].num_indirect * this.block_size + this.inodes[0].num_direct) * this.block_size;
         if (canvas) {
             this.animations = new FSAnimator(this, canvas);
         } else {
@@ -137,7 +137,7 @@ export class MyFS extends DefaultFS {
      */
     async ensure_min_blockcount(inode, blockcount) {
 
-        var inodenum = this._inodes.findIndex((x) => x == inode);
+        var inodenum = this.inodes.findIndex((x) => x == inode);
 
         var currblocks = Math.ceil(inode.filesize / this.block_size);
 
@@ -211,21 +211,21 @@ export class MyFS extends DefaultFS {
     async empty_inode(inodenum) {
         var had_indirect = false;
         var blocknum = 0;
-        while (this._inodes[inodenum].filesize > 0) {
-            if (blocknum < this._inodes[inodenum].num_direct) {
-                await this.release_block(this._inodes[inodenum].direct[blocknum]);
+        while (this.inodes[inodenum].filesize > 0) {
+            if (blocknum < this.inodes[inodenum].num_direct) {
+                await this.release_block(this.inodes[inodenum].direct[blocknum]);
             } else {
                 had_indirect = true;
-                var indirect_block = this._inodes[inodenum].indirect[0];
-                var indirect_index = blocknum - this._inodes[inodenum].num_direct;
+                var indirect_block = this.inodes[inodenum].indirect[0];
+                var indirect_index = blocknum - this.inodes[inodenum].num_direct;
                 await this.release_block(this.get_disk_block_view_from_block_num(indirect_block)[indirect_index]);
             }
-            this._inodes[inodenum].filesize -= Math.min(this._inodes[inodenum].filesize, this.block_size);
+            this.inodes[inodenum].filesize -= Math.min(this.inodes[inodenum].filesize, this.block_size);
             blocknum++;
         }
 
         if (had_indirect)
-            await this.release_block(this._inodes[inodenum].indirect[0]);
+            await this.release_block(this.inodes[inodenum].indirect[0]);
     }
 
     /**
@@ -326,7 +326,7 @@ export class MyFS extends DefaultFS {
             if (dir_contents == null) {
                 inodenum = 0;
                 parent_inodenum = 0;
-                inode = this._inodes[inodenum];
+                inode = this.inodes[inodenum];
             } else {
                 inode = null;
                 // skip '.' and '..'
@@ -334,7 +334,7 @@ export class MyFS extends DefaultFS {
                     if (dir_contents[j].filename == path_arr[i]) {
                         parent_inodenum = inodenum;
                         inodenum = dir_contents[j].inodenum;
-                        inode = this._inodes[inodenum];
+                        inode = this.inodes[inodenum];
                         break;
                     }
                 }
@@ -372,7 +372,7 @@ export class MyFS extends DefaultFS {
         var inodenum = await this.inode_of(file);
         if (typeof(inodenum) === 'string')
             return inodenum;
-        var inode = this._inodes[inodenum];
+        var inode = this.inodes[inodenum];
         inode.update_atim();
         var info = new Stat(
             file,
@@ -394,7 +394,7 @@ export class MyFS extends DefaultFS {
         if (inodenum == 0)
             return "EPERM";
 
-        var inode = this._inodes[inodenum];
+        var inode = this.inodes[inodenum];
 
         inode.update_atim();
         inode.update_ctim();
@@ -411,7 +411,7 @@ export class MyFS extends DefaultFS {
 
         var split_filename = helper.split_parent_of(path);
         var parent_inodenum = await this.inode_of(split_filename[0]);
-        var parent_inode = this._inodes[parent_inodenum];
+        var parent_inode = this.inodes[parent_inodenum];
 
         parent_inode.update_atim();
         parent_inode.update_mtim();
@@ -490,7 +490,7 @@ export class MyFS extends DefaultFS {
         if (typeof(parent_inodenum) === 'string')
             return "ENOENT";
 
-        var parent_inode = this._inodes[parent_inodenum];
+        var parent_inode = this.inodes[parent_inodenum];
         if (!parent_inode.is_directory)
             return "ENOTDIR";
 
@@ -501,7 +501,7 @@ export class MyFS extends DefaultFS {
         // if inode is 0 or undefined then we need to grab a fresh inode
         if (!inode) {
             for (var i = 1; i < this.num_inodes; i++) {
-                if (this._inodes[i].num_links == 0) {
+                if (this.inodes[i].num_links == 0) {
                     found_inode = i;
                     break;
                 }
@@ -528,10 +528,10 @@ export class MyFS extends DefaultFS {
         dirent[0] = found_inode;
         var error = await this.write(filedes, dirent);
 
-        this._inodes[found_inode].num_links++;
-        this._inodes[found_inode].permissions = mode;
-        this._inodes[found_inode].update_atim();
-        this._inodes[found_inode].update_ctim();
+        this.inodes[found_inode].num_links++;
+        this.inodes[found_inode].permissions = mode;
+        this.inodes[found_inode].update_atim();
+        this.inodes[found_inode].update_ctim();
 
         if (typeof(error) == 'string')
             return error;
@@ -544,7 +544,7 @@ export class MyFS extends DefaultFS {
         if (typeof(inodenum) == 'string')
             return inodenum;
 
-        var inode = this._inodes[inodenum];
+        var inode = this.inodes[inodenum];
         if (length > inode.filesize) {
             var file = await this.open(path, CONSTANTS.O_WRONLY | CONSTANTS.O_APPEND);
             if (typeof(file) === 'string')
@@ -598,7 +598,7 @@ export class MyFS extends DefaultFS {
                 return inodenum;
         }
 
-        var inode = this._inodes[inodenum];
+        var inode = this.inodes[inodenum];
         inode.update_atim();
 
         if ((flags & CONSTANTS.O_DIRECTORY) && !(inode.is_directory)) {
@@ -633,7 +633,7 @@ export class MyFS extends DefaultFS {
         var inodenum = await this.inode_of(path);
         if (typeof(inodenum) == 'string')
             return inodenum;
-        var inode = this._inodes[inodenum];
+        var inode = this.inodes[inodenum];
         inode.permissions = permissions;
         inode.update_atim();
         inode.update_ctim();
@@ -647,9 +647,9 @@ export class MyFS extends DefaultFS {
         if (typeof(inodenum) == 'string')
             return inodenum;
 
-        var inode = this._inodes[inodenum];
+        var inode = this.inodes[inodenum];
         // atim/mtim/ctim managed  by create
-        return this.create(path2, this._inodes[inodenum].permissions, inodenum);
+        return this.create(path2, this.inodes[inodenum].permissions, inodenum);
     }
 
     async mkdir(name, mode) {
@@ -657,7 +657,7 @@ export class MyFS extends DefaultFS {
         if (typeof(new_inode) == 'string')
             return new_inode;
 
-        this._inodes[new_inode].is_directory = true;
+        this.inodes[new_inode].is_directory = true;
         return new_inode;
     }
 
@@ -749,8 +749,8 @@ export class MyFS extends DefaultFS {
     }
 
     async _get_inode_from_blocknum(block_num) {
-        for (var i = 0; i < this._inodes.length; i++) {
-            var inode = this._inodes[i];
+        for (var i = 0; i < this.inodes.length; i++) {
+            var inode = this.inodes[i];
             if (!inode.num_links || !inode.filesize)
                 continue;
 
@@ -785,8 +785,8 @@ export class MyFS extends DefaultFS {
     async defragment(filedes, buffer) {
         // This is a very simple defragmentation algorithm
         var start_idx = 0;
-        for (var i = 0; i < this._inodes.length; i++) {
-            var inode = this._inodes[i];
+        for (var i = 0; i < this.inodes.length; i++) {
+            var inode = this.inodes[i];
             if (!inode.num_links || !inode.filesize)
                 continue;
 
