@@ -13,8 +13,7 @@ window.onload = async function() {
     shell.main("{{ site.baseurl }}");
     console.log("set up shell");
 
-    var canvas = create_canvas('fs_vis');
-    animated_fs = new LayeredFilesystem(null, canvas);
+    animated_fs = new LayeredFilesystem(null, document.getElementById("fs_vis"));
     animated_shell = new Shell(animated_fs, document.getElementById("shell_fs_parent"));
     animated_shell.main("{{ site.baseurl }}");
     console.log("set up animated shell");

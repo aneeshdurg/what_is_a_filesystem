@@ -38,7 +38,7 @@ Try running some commands in the shell below and see how/if they interact with t
 
 <div id="shell_fs_parent"></div>
 <br>
-<canvas id="fs_vis"></canvas>
+<div id="fs_vis"></div>
 
 You can change the speed of the animations here:
 

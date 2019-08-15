@@ -5,8 +5,7 @@ import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
 import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 
-var canvas = create_canvas('fs_1');
-var fs = new MyFS(canvas);
+var fs = new MyFS(document.getElementById('fs_1'));
 var shell = new Shell(new LayeredFilesystem(fs), document.getElementById("shell_1"));
 shell.main("{{ site.baseurl }}");
 
@@ -27,6 +26,6 @@ window.run_hexdump = function () {
     shell_2.simulate_input("hexdump /\n");
 }
 
-var canvas_3 = create_canvas('fs_3');
-var shell_3 = new Shell(new LayeredFilesystem(null, canvas_3), document.getElementById("shell_3"));
+var shell_3 = new Shell(
+  new LayeredFilesystem(null, document.getElementById('fs_3')), document.getElementById("shell_3"));
 shell_3.main("{{ site.baseurl }}");

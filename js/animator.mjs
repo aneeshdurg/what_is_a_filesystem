@@ -17,42 +17,14 @@ class ReadTask extends Task {
 }
 
 export class FSAnimator {
-    constructor(fs, canvas, block_limit) {
+    constructor(fs, container, block_limit) {
         var that = this;
 
-        this.canvas = canvas;
-        this.canvas.onclick = async function (event) {
-            // https://stackoverflow.com/a/18053642/5803067
-            const rect = that.canvas.getBoundingClientRect()
-            const x = event.clientX - rect.left
-            const y = event.clientY - rect.top
+        this.container = container;
+        this.container.style.height = "150px";
 
-            if (y > (that.canvas.height / 2)) {
-                that.selected_inode = null;
-                return;
-            }
+        this.create_canvas();
 
-            if (x < (that.canvas.width * that.inode_space) ) {
-                // clicked on an inode
-                const inodenum = Math.floor(x / that.inode_width);
-                const inode = that.fs.inodes[inodenum];
-                that.select_inode(inodenum, inode);
-            } else {
-                // clicked on a block
-                this._disable = true;
-                const blocknum = Math.floor((x - (that.canvas.width * that.inode_space)) / that.block_width);
-                const lookup = await that.fs.get_inode_from_blocknum(blocknum);
-                if (lookup) {
-                    console.log(lookup);
-                    that.select_inode(lookup.inodenum, lookup.inode);
-                } else {
-                    that.selected_inode = null;
-                }
-
-                this._disable = false;
-            }
-        }
-        this.ctx = canvas.getContext("2d");
         this.fs = fs; // instance of MyFS
         if (!block_limit)
             block_limit = 50
@@ -90,6 +62,56 @@ export class FSAnimator {
 
         this._disable = false;
     }
+
+    create_canvas() {
+        this.canvas = document.createElement('canvas');
+        this.container.appendChild(this.canvas);
+
+        var width = this.container.offsetWidth;
+        var height = this.container.offsetHeight;
+        this.canvas.width = width;
+        this.canvas.height = "300";
+        this.canvas.style.border = "1px solid #d3d3d3";
+
+        var that = this;
+        this.canvas.onclick = async function (event) {
+            // https://stackoverflow.com/a/18053642/5803067
+            const rect = that.canvas.getBoundingClientRect()
+            const x = event.clientX - rect.left
+            const y = event.clientY - rect.top
+
+            if (y > (that.canvas.height / 2)) {
+                that.selected_inode = null; // TODO define getter/setter for selected_inode
+                that.container.style.height = "150px";
+                return;
+            }
+
+            if (x < (that.canvas.width * that.inode_space) ) {
+                // clicked on an inode
+                const inodenum = Math.floor(x / that.inode_width);
+                const inode = that.fs.inodes[inodenum];
+                that.select_inode(inodenum, inode);
+            } else {
+                // clicked on a block
+                this._disable = true; // TODO fix disable
+                const blocknum = Math.floor((x - (that.canvas.width * that.inode_space)) / that.block_width);
+                const lookup = await that.fs.get_inode_from_blocknum(blocknum);
+                if (lookup) {
+                    console.log(lookup);
+                    that.select_inode(lookup.inodenum, lookup.inode);
+                } else {
+                    that.selected_inode = null;
+                    that.container.style.height = "150px";
+                }
+
+                this._disable = false;
+            }
+        }
+
+        this.ctx = this.canvas.getContext("2d");
+    }
+
+
 
     setup_cache() {
         this.cache = [];
@@ -312,6 +334,7 @@ export class FSAnimator {
             inodenum: inodenum,
             inode: inode,
         }
+        this.container.style.height = "";
     }
 
     // https://stackoverflow.com/a/6333775/5803067

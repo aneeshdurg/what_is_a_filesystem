@@ -123,7 +123,7 @@ describe("Test MyFS", function() {
         var inode2 = await fs.link("/newfile", "/newfile1");
 
         expect((await fs.readdir("/")).length).toBe(4);
-        expect(file1.inode).toBe(fs._inodes[inode2]);
+        expect(file1.inode).toBe(fs.inodes[inode2]);
         expect(typeof(i1)).not.toBe('string');
 
         return fs;

@@ -62,7 +62,7 @@ export class Inode {
 }
 
 export class MyFS extends DefaultFS {
-    constructor(canvas) {
+    constructor(container) {
         super();
 
         this.block_size = 16; // block size in B
@@ -87,8 +87,8 @@ export class MyFS extends DefaultFS {
         this.inodes[0].update_ctim();
 
         this.max_filesize = (this.inodes[0].num_indirect * this.block_size + this.inodes[0].num_direct) * this.block_size;
-        if (canvas) {
-            this.animations = new FSAnimator(this, canvas);
+        if (container) {
+            this.animations = new FSAnimator(this, container);
         } else {
             this.animations = null;
         }

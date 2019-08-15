@@ -25,8 +25,7 @@ export function run_cat_on_shell(shell) {
 }
 
 
-var canvas_1 = create_canvas('canvas_1');
-var fs_1 = new MyFS(canvas_1);
+var fs_1 = new MyFS(document.getElementById('fs_1'));
 fs_1.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
     duration: 10,
     save: false,

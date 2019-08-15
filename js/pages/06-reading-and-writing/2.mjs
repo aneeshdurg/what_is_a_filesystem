@@ -6,8 +6,7 @@ import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
 import {create_file_from_remote, run_cat_on_shell} from "./1.js"
 
-var canvas_2 = create_canvas('canvas_2');
-var fs_2 = new MyFS(canvas_2);
+var fs_2 = new MyFS(document.getElementById('fs_2'));
 fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
         duration: 10,
         save: false,

@@ -35,7 +35,7 @@ Luckily for us, this number is usually high enough that it's unlikely you'd ever
 
 Let's take a look at an example.
  
-<canvas id="canvas_1"></canvas>
+<div id="fs_1"></div>
 <script type="module" src="{{ '/js/pages/05-inodes/1.mjs' | relative_url }}"></script>
 
 In this filesystem each block is 16B.
@@ -45,7 +45,7 @@ You can see that it occupies You might have also noticed the `direct` and `indir
 These refer to the structures that store the block indicies used by this file.
 
 Here you can see another example where we have a file who's contents are not contiguously stored on disk.
-<canvas id="canvas_2"></canvas>
+<div id="fs_2"></div>
 <script type="module" src="{{ '/js/pages/05-inodes/2.mjs' | relative_url }}"></script>
 
 When reading from this non-contiguous file, the `read` command will give us access to a stream of data and
@@ -94,7 +94,7 @@ See the [first post]({{ '/pages/1-intro.html' | relative_url }}) for instruction
 
 Every time a disk block is read it will flash. Try to guess which block is the indirect block.
 
-<canvas id="canvas_3"></canvas>
+<div id="fs_3"></div>
 <br>
 <button onclick="run_disk_read()">Read file</button>
 <script type="module" src="{{ '/js/pages/05-inodes/4.mjs' | relative_url }}"></script>

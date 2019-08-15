@@ -3,8 +3,7 @@
 import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_url }}"
 import {CONSTANTS} from "{{ '/js/defs.mjs' | relative_url }}"
 
-var canvas_3 = create_canvas('canvas_3');
-var fs_3 = new MyFS(canvas_3);
+var fs_3 = new MyFS(document.getElementById("fs_3"));
 var setup_3 = (async function() {
     fs_3.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
         duration: 10,

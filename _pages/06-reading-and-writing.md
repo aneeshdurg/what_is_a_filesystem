@@ -12,7 +12,7 @@ Let's begin by considering the simplest cases, ones where we're reading a file t
 This time each step in the animation will advance only when you press `step`.
 
 <div id='shell_1'></div>
-<canvas id='canvas_1'></canvas>
+<div id='fs_1'></div>
 <button onclick='step_fs_1()'>Step</button>
 
 Notice how we read one block at a time?
@@ -39,7 +39,7 @@ Let's take a look at a slightly more involved example, one where the size of the
 As we calculated in the [previous section](/pages/05-inodes.html), the maximum size of a file is `288B`.
 
 <div id='shell_2'></div>
-<canvas id='canvas_2'></canvas>
+<div id='fs_2'></div>
 <button onclick='step_fs_2()'>Step</button>
 <script type="module" src="{{ '/js/pages/06-reading-and-writing/2.mjs' | relative_url }}"></script>
 
@@ -81,5 +81,5 @@ And watch how the disk is accessed in each case.
 (If you'd like to slow down or speed up the animations, please refer to the [first post]({{ '/pages/01-intro.html#speed_selector' | relative_url }}))
 
 <div id='shell_3'></div>
-<canvas id='canvas_3'></canvas>
+<div id='fs_3'></div>
 <script type="module" src="{{ '/js/pages/06-reading-and-writing/3.mjs' | relative_url }}"></script>

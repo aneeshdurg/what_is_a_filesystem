@@ -3,10 +3,8 @@
 import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_url }}"
 import {CONSTANTS, IOCTL_SELECT_INODE} from "{{ '/js/defs.mjs' | relative_url }}"
 
-var canvas_2 = create_canvas('canvas_2');
-
 // Make fs_2 global
-export const fs_2 = new MyFS(canvas_2);
+export const fs_2 = new MyFS(document.getElementById('fs_2'));
 fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
     duration: 10,
     save: false,

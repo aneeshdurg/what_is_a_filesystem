@@ -23,7 +23,7 @@ Try making a bunch of files and directories in the shell below and then run `ls 
 To view information about a particular file's inode, run `inodeinfo filename` (note that in real life `inodeinfo` is not a standard utility - it's something we made to interact with the visualizations).
 
 <div id="shell_1"></div>
-<canvas id="fs_1"></canvas>
+<div id="fs_1"></div>
 
 Every time you run `ls`, you'll notice that all blocks of the root directory inode are read and dirents are extracted.
 Similarly when you run `touch` or `mkdir` a block will be appended (in this filesystem dirents are 16B, with 1B providing an inode number and 15B for the filename).
@@ -68,7 +68,7 @@ Try it out for yourself:
 + Just for fun, also run `cat >> myfile` and append some content to `myfile`. Then run `cat linkedfile` and see the appended text appear.
 
 <div id="shell_3"></div>
-<canvas id="fs_3"></canvas>
+<div id="fs_3"></div>
 
 Earlier we noted that inodes don't store their own names, and this is the reason why.
 An inode could have multiple links!

@@ -21,15 +21,9 @@ window.setup = function() {
 
     var canvas_container = document.createElement('div');
     canvas_container.style.overflow = "hidden";
-    var canvas_el = document.createElement('canvas');
-    canvas_el.id = 'canvas';
-    canvas_container.appendChild(canvas_el);
     latency_container.appendChild(canvas_container);
 
-    var canvas = create_canvas('canvas');
-    canvas_container.style.height = "150px";
-
-    fs = new MyFS(canvas);
+    fs = new MyFS(canvas_container);
     fs.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
         duration: 1,
         save: false,
@@ -100,7 +94,6 @@ window.setup = function() {
         fs.ioctl(null, myfs.IOCTL_SET_DISK_PTR_SPEED, {speed: 0.5});
         fs.ioctl(null, myfs.IOCTL_ENABLE_DISK_PTR);
         // Allow user interaction
-        canvas_container.style.height = "";
         shell.reenable_container_event_listeners();
 
         controls.style.display = "";
