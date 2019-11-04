@@ -4,7 +4,7 @@ import {MyFS, IOCTL_SET_ANIMATION_DURATION} from "{{ '/js/myfs.mjs' | relative_u
 import {LayeredFilesystem} from "{{ '/js/lfs.mjs' | relative_url }}"
 import {Shell} from "{{ '/js/shell.mjs' | relative_url }}"
 
-import {create_file_from_remote, run_cat_on_shell} from "./1.js"
+import {create_file_from_remote, run_cat_on_shell} from "./1.mjs"
 
 var fs_2 = new MyFS(document.getElementById('fs_2'));
 fs_2.ioctl(null, IOCTL_SET_ANIMATION_DURATION, {
