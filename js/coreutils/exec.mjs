@@ -17,7 +17,7 @@ Shell.prototype.handle_exec = async function(command) {
     var path = this.expand_path(command.arguments[0]);
     var file = await this.filesystem.open(path, CONSTANTS.O_RDONLY);
     if (typeof(file) === 'string')
-        return this.return_error("Invalid command: '" + file + "'");
+        return this.return_error("Invalid command: '" + command.arguments + "'");
 
     var info = await this.filesystem.stat(path);
     if (typeof(info) === 'string')
