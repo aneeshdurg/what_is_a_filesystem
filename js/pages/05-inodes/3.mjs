@@ -2,7 +2,7 @@
 ---
 import {CONSTANTS} from "{{ '/js/defs.mjs' | relative_url }}"
 
-import {fs_2, setup_2} from "./2.js"
+import {fs_2, setup_2} from "./2.mjs"
 
 (async function() {
     await setup_2;
