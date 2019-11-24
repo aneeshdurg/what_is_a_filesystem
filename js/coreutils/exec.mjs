@@ -14,6 +14,9 @@ import * as shell from '../shell.mjs'
 
 Shell.prototype.handle_exec = async function(command) {
     command.arguments.shift();
+    if (command.arguments.length == 0)
+        return this.return_error("Invalid command: '" + command.arguments + "'");
+
     var path = this.expand_path(command.arguments[0]);
     var file = await this.filesystem.open(path, CONSTANTS.O_RDONLY);
     if (typeof(file) === 'string')

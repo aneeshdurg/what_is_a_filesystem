@@ -10,8 +10,7 @@ Shell.prototype.handle_clear = async function(command) {
 
     var terminal = this.output.element;
     // TODO turn this into an IOCTL call?
-    var lines = Math.ceil(terminal.scrollHeight / parseFloat(getComputedStyle(terminal)['font-size']))
-    console.log("Clearing", lines, "lines");
+    var lines = Math.ceil(terminal.scrollHeight / parseFloat(getComputedStyle(terminal)['font-size'])) || 0;
     for (var i = 0; i < lines; i++) {
         var error = await this.filesystem.write(command.output, str_to_bytes("\n"));
         if (typeof(error) === 'string')

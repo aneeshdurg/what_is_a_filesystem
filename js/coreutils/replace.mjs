@@ -8,7 +8,7 @@ Shell.prototype.handle_replace = async function(command) {
         const usage =
             "replace str1 str2\n" +
             "	replaces str1 in input by str2 in output\n";
-        await this.filesystem.write(this.stderr, str_to_bytes(usage));
+        return this.return_error(usage);
     }
 
     var input_file = await this.filesystem.open(this.input_path, CONSTANTS.O_RDONLY);
@@ -22,7 +22,6 @@ Shell.prototype.handle_replace = async function(command) {
 
     if (out_is_stdout && in_is_stdin) {
         bufferlen = 1; // interactive mode
-        console.log("Detected interactive mode");
     }
     var buffer = new Uint8Array(new ArrayBuffer(bufferlen));
 
