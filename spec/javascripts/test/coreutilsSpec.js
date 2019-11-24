@@ -24,7 +24,11 @@ describe("Test Shell Commands", function () {
     it("smoke tests all commands", async () => {
         const shell = await get_shell();
         const errors = {};
-        const command_tests = possible_commands.map((command) => {
+        const command_tests = possible_commands.filter((command) => {
+            // ignoring these tests because they assume stdin as first arg and
+            // would fail this test
+            return !(["cat", "hexdump", "read"].includes(command.name));
+        }).map((command) => {
             return [command.name, new Promise((r, e) => {
                 setTimeout(() => { e(`${command.name} timed out!`) }, 500);
                 shell.run_command(new Command(command.name)).then(r);
