@@ -1,25 +1,46 @@
+async function imports() {
+    await _import({
+        src: '/__src__/js/defs.mjs',
+        name: ['CONSTANTS']});
+
+    await _import({
+        src: '/__src__/js/lfs.mjs',
+        name: 'LayeredFilesystem'});
+
+    await _import({
+        src: '/__src__/js/shell.mjs',
+        name: ['Shell', 'Command', 'possible_commands']});
+
+    await _import({
+        src: '/__src__/js/fs_helper.mjs',
+        name: 'str_to_bytes'});
+}
+
 describe("Test Shell Commands", function () {
-    async function imports() {
-        await _import({
-            src: '/__src__/js/defs.mjs',
-            name: ['CONSTANTS']});
-
-        await _import({
-            src: '/__src__/js/lfs.mjs',
-            name: 'LayeredFilesystem'});
-
-        await _import({
-            src: '/__src__/js/shell.mjs',
-            name: ['Shell', 'Command']});
-
-        await _import({
-            src: '/__src__/js/fs_helper.mjs',
-            name: 'str_to_bytes'});
-    }
-
     beforeAll(async () => {
         await imports();
     });
+
+    it("smoke tests all commands", async () => {
+        const shell = await get_shell();
+        const errors = {};
+        const command_tests = possible_commands.map((command) => {
+            return [command.name, new Promise((r, e) => {
+                setTimeout(() => { e(`${command.name} timed out!`) }, 500);
+                shell.run_command(new Command(command.name)).then(r);
+            })]
+        });
+        for (const c in command_tests) {
+            const test = command_tests[c];
+            try {
+                await test[1];
+            } catch (e) {
+                errors[test[0]] = e;
+            }
+        }
+
+        expect(errors).toEqual({});
+    })
 
     it("tests cat", async function() {
         // create file with some expected contents
